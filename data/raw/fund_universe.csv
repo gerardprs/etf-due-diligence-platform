@@ -1,0 +1,8 @@
+ticker,name,asset_class,benchmark_ticker,category,role
+VOO,Vanguard S&P 500 ETF,US Equity,SPY,Large Blend,Core US equity exposure
+IVV,iShares Core S&P 500 ETF,US Equity,SPY,Large Blend,Core US equity exposure
+SPLG,SPDR Portfolio S&P 500 ETF,US Equity,SPY,Large Blend,Low-cost US equity exposure
+QQQM,Invesco NASDAQ 100 ETF,US Equity,QQQ,Large Growth,Growth equity exposure
+SCHD,Schwab US Dividend Equity ETF,US Equity,VIG,Dividend Equity,Dividend-oriented equity exposure
+BND,Vanguard Total Bond Market ETF,Fixed Income,AGG,Intermediate Core Bond,Core fixed income exposure
+IEMG,iShares Core MSCI Emerging Markets ETF,Emerging Markets Equity,EEM,Diversified Emerging Markets,Emerging markets equity exposure

@@ -1,0 +1,46 @@
+﻿ticker,name,quote_type,category,fund_family,total_assets,expense_ratio,currency,exchange,average_volume,last_price,metadata_available
+AGG,iShares Core U.S. Aggregate Bond ETF,ETF,Intermediate Core Bond,iShares,138698178560,0.03,USD,PCX,10073450,98.9000015258789,True
+BIV,Vanguard Intermediate-Term Bond Index Fund,ETF,Intermediate Core Bond,Vanguard,51797950464,0.03,USD,PCX,2169165,76.81999969482422,True
+BND,Vanguard Total Bond Market Index Fund,ETF,Intermediate Core Bond,Vanguard,387461611520,0.03,USD,NGM,8622111,73.36000061035156,True
+DGRO,iShares Core Dividend Growth ETF,ETF,Large Value,iShares,37549682688,0.08,USD,PCX,2415154,73.43000030517578,True
+DVY,iShares Select Dividend ETF,ETF,Mid-Cap Value,iShares,22291916800,0.38,USD,NGM,439550,154.6300048828125,True
+FTEC,Fidelity MSCI Information Technology Index ETF,ETF,Technology,Fidelity Investments,15053115392,0.084,USD,PCX,446757,250.1999969482422,True
+GOVT,iShares U.S. Treasury Bond ETF,ETF,Intermediate Government,iShares,40681287680,0.05,USD,BTS,11621609,22.780000686645508,True
+HDV,iShares Core High Dividend ETF,ETF,Large Value,iShares,13547995136,0.08,USD,PCX,3830790,27.34000015258789,True
+HYG,iShares iBoxx $ High Yield Corporate Bond ETF,ETF,High Yield Bond,iShares,16378809344,0.49,USD,PCX,54569014,80.05999755859375,True
+HYLB,Xtrackers USD High Yield Corporate Bond ETF,ETF,High Yield Bond,Xtrackers,3126557696,0.05,USD,PCX,2019152,36.56999969482422,True
+IEF,iShares 7-10 Year Treasury Bond ETF,ETF,Long Government,iShares,48925843456,0.15,USD,NGM,10312842,94.73999786376953,True
+IEI,iShares 3-7 Year Treasury Bond ETF,ETF,Intermediate Government,iShares,18661527552,0.15,USD,NGM,2256967,117.91000366210938,True
+IGSB,iShares 1-5 Year Investment Grade Corporate Bond ETF,ETF,Short-Term Bond,iShares,21914433536,0.04,USD,NGM,3708626,52.380001068115234,True
+IUSB,iShares Core Universal USD Bond ETF,ETF,Intermediate Core-Plus Bond,iShares,36142247936,0.06,USD,NGM,3394490,46.09000015258789,True
+IVV,iShares Core S&P 500 ETF,ETF,Large Blend,iShares,720543350784,0.03,USD,PCX,8486032,724.010009765625,True
+IWB,iShares Russell 1000 ETF,ETF,Large Blend,iShares,42777825280,0.15,USD,PCX,1659637,393.8900146484375,True
+IWF,iShares Russell 1000 Growth ETF,ETF,Large Growth,iShares,111773540352,0.18,USD,PCX,12259854,120.05000305175781,True
+IYW,iShares U.S. Technology ETF,ETF,Technology,iShares,17692475392,0.38,USD,PCX,1821742,221.00999450683594,True
+JNK,State Street SPDR Bloomberg High Yield Bond ETF,ETF,High Yield Bond,State Street Investment Management,6959778304,0.4,USD,PCX,5992232,96.4000015258789,True
+LQD,iShares iBoxx $ Investment Grade Corporate Bond ETF,ETF,Corporate Bond,iShares,28883736576,0.14,USD,PCX,40923396,108.5999984741211,True
+NOBL,ProShares S&P 500 Dividend Aristocrats ETF,ETF,Large Value,ProShares,11058682880,0.35,USD,BTS,794883,107.66999816894531,True
+OEF,iShares S&P 100 ETF,ETF,Large Blend,iShares,17841272832,0.2,USD,PCX,1553834,356.70001220703125,True
+QQQM,Invesco NASDAQ 100 ETF,ETF,Large Growth,Invesco,68830765056,0.15,USD,NGM,4279596,277.5400085449219,True
+SCHD,Schwab U.S. Dividend Equity ETF,ETF,Large Value,Schwab ETFs,84820000768,0.06,USD,PCX,23863500,31.860000610351562,True
+SCHG,Schwab U.S. Large-Cap Growth ETF,ETF,Large Growth,Schwab ETFs,48416563200,0.04,USD,PCX,18542011,33.13999938964844,True
+SCHX,Schwab U.S. Large-Cap ETF,ETF,Large Blend,Schwab ETFs,61436944384,0.03,USD,PCX,22911040,28.3799991607666,True
+SCHZ,Schwab U.S. Aggregate Bond ETF,ETF,Intermediate Core Bond,Schwab ETFs,10019860480,0.03,USD,PCX,2328331,23.1299991607666,True
+SDY,State Street SPDR S&P Dividend ETF,ETF,Mid-Cap Value,State Street Investment Management,20672563200,0.35,USD,PCX,213196,149.13999938964844,True
+SHY,iShares 1-3 Year Treasury Bond ETF,ETF,Short Government,iShares,24748150784,0.15,USD,NGM,5187547,82.25,True
+SHYG,iShares 0-5 Year High Yield Corporate Bond ETF,ETF,High Yield Bond,iShares,7458061312,0.3,USD,PCX,1738545,42.459999084472656,True
+SJNK,State Street SPDR Bloomberg Short Term High Yield Bond ETF,ETF,High Yield Bond,State Street Investment Management,4721541632,0.4,USD,PCX,4290924,25.06999969482422,True
+SPLG,State Street SPDR Portfolio S&P 500 ETF,ETF,Large Blend,State Street Investment Management,97328324608,0.02,USD,PCX,10140375,80.0,True
+TLT,iShares 20+ Year Treasury Bond ETF,ETF,Long Government,iShares,42618560512,0.15,USD,NGM,35276998,85.61000061035156,True
+USIG,iShares Broad USD Investment Grade Corporate Bond ETF,ETF,Corporate Bond,iShares,17055147008,0.04,USD,NGM,3122152,51.099998474121094,True
+VCIT,Vanguard Intermediate-Term Corporate Bond Index Fund ETF Shares,ETF,Corporate Bond,Vanguard,66028621824,0.03,USD,NGM,12892988,82.58000183105469,True
+VCSH,Vanguard Short-Term Corporate Bond Index Fund ETF Shares,ETF,Short-Term Bond,Vanguard,48491991040,0.03,USD,NGM,5423531,78.9800033569336,True
+VGIT,Vanguard Intermediate-Term Treasury Index Fund ETF Shares,ETF,Intermediate Government,Vanguard,48471842816,0.03,USD,NGM,3297129,59.15999984741211,True
+VGLT,Vanguard Long-Term Treasury Index Fund ETF Shares,ETF,Long Government,Vanguard,14362285056,0.03,USD,NGM,2724931,54.72999954223633,True
+VGSH,Vanguard Short-Term Treasury Index Fund ETF Shares,ETF,Short Government,Vanguard,33368180736,0.03,USD,NGM,4056791,58.310001373291016,True
+VGT,Vanguard Information Technology Index Fund ETF Shares,ETF,Technology,Vanguard,121284206592,0.09,USD,PCX,4288877,104.8499984741211,True
+VIG,Vanguard Dividend Appreciation Index Fund ETF Shares,ETF,Large Blend,Vanguard,117045436416,0.04,USD,PCX,1341898,228.44000244140625,True
+VOO,Vanguard S&P 500 ETF,ETF,Large Blend,Vanguard,1421127057408,0.03,USD,PCX,10136121,662.52001953125,True
+VUG,Vanguard Growth Index Fund ETF Shares,ETF,Large Growth,Vanguard,317921722368,0.03,USD,PCX,9981136,83.86000061035156,True
+VYM,Vanguard High Dividend Yield Index Fund ETF Shares,ETF,Large Value,Vanguard,88722817024,0.04,USD,PCX,1579059,156.50999450683594,True
+XLK,State Street Technology Select Sector SPDR ETF,ETF,Technology,State Street Investment Management,84198424576,0.08,USD,PCX,17436650,161.8699951171875,True

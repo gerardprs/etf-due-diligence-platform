@@ -1,0 +1,46 @@
+﻿mandate,ticker,name,asset_class,benchmark_ticker,category,role
+Core Fixed Income,AGG,,Fixed Income,BND,Core Fixed Income,Mandato - Core Fixed Income
+Core Fixed Income,BIV,,Fixed Income,AGG,Core Fixed Income,Mandato - Core Fixed Income
+Core Fixed Income,BND,,Fixed Income,AGG,Core Fixed Income,Mandato - Core Fixed Income
+Core Fixed Income,GOVT,,Fixed Income,IEF,Core Fixed Income,Mandato - Core Fixed Income
+Core Fixed Income,IUSB,,Fixed Income,AGG,Core Fixed Income,Mandato - Core Fixed Income
+Core Fixed Income,SCHZ,,Fixed Income,AGG,Core Fixed Income,Mandato - Core Fixed Income
+Dividend Equity,DGRO,,Dividend Equity,VIG,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,DVY,,Dividend Equity,VYM,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,HDV,,Dividend Equity,VYM,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,NOBL,,Dividend Equity,SDY,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,SCHD,,Dividend Equity,VIG,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,SDY,,Dividend Equity,NOBL,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,VIG,,Dividend Equity,DGRO,Dividend Equity,Mandato - Dividend Equity
+Dividend Equity,VYM,,Dividend Equity,DVY,Dividend Equity,Mandato - Dividend Equity
+High Yield Credit,HYG,,Fixed Income,JNK,High Yield Credit,Mandato - High Yield Credit
+High Yield Credit,HYLB,,Fixed Income,HYG,High Yield Credit,Mandato - High Yield Credit
+High Yield Credit,JNK,,Fixed Income,HYG,High Yield Credit,Mandato - High Yield Credit
+High Yield Credit,SHYG,,Fixed Income,HYG,High Yield Credit,Mandato - High Yield Credit
+High Yield Credit,SJNK,,Fixed Income,JNK,High Yield Credit,Mandato - High Yield Credit
+Investment Grade Credit,IGSB,,Fixed Income,VCSH,Investment Grade Credit,Mandato - Investment Grade Credit
+Investment Grade Credit,LQD,,Fixed Income,VCIT,Investment Grade Credit,Mandato - Investment Grade Credit
+Investment Grade Credit,USIG,,Fixed Income,LQD,Investment Grade Credit,Mandato - Investment Grade Credit
+Investment Grade Credit,VCIT,,Fixed Income,LQD,Investment Grade Credit,Mandato - Investment Grade Credit
+Investment Grade Credit,VCSH,,Fixed Income,IGSB,Investment Grade Credit,Mandato - Investment Grade Credit
+Treasury Duration,IEF,,Fixed Income,IEI,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,IEI,,Fixed Income,SHY,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,SHY,,Fixed Income,IEI,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,TLT,,Fixed Income,VGLT,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,VGIT,,Fixed Income,IEI,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,VGLT,,Fixed Income,TLT,Treasury Duration,Mandato - Treasury Duration
+Treasury Duration,VGSH,,Fixed Income,SHY,Treasury Duration,Mandato - Treasury Duration
+US Growth / Technology,FTEC,,Growth Equity,VGT,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,IWF,,Growth Equity,VUG,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,IYW,,Growth Equity,VGT,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,QQQM,,Growth Equity,QQQ,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,SCHG,,Growth Equity,VUG,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,VGT,,Growth Equity,XLK,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,VUG,,Growth Equity,IWF,US Growth / Technology,Mandato - US Growth / Technology
+US Growth / Technology,XLK,,Growth Equity,VGT,US Growth / Technology,Mandato - US Growth / Technology
+US Large Cap Core,IVV,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core
+US Large Cap Core,IWB,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core
+US Large Cap Core,OEF,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core
+US Large Cap Core,SCHX,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core
+US Large Cap Core,SPLG,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core
+US Large Cap Core,VOO,,US Equity,SPY,US Large Cap Core,Mandato - US Large Cap Core

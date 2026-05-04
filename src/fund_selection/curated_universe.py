@@ -1,0 +1,132 @@
+"""Curated ETF mandates used by the demo screening workflow."""
+
+from __future__ import annotations
+
+
+MANDATE_PRESETS = {
+    "US Large Cap Core": {
+        "asset_class": "US Equity",
+        "category": "US Large Cap Core",
+        "description": "Exposición core a renta variable large cap de EE.UU.; el benchmark proxy es S&P 500 vía SPY.",
+        "tickers": ["VOO", "IVV", "SPLG", "SCHX", "IWB", "OEF"],
+        "benchmarks": {
+            "VOO": "SPY",
+            "IVV": "SPY",
+            "SPLG": "SPY",
+            "SCHX": "SPY",
+            "IWB": "SPY",
+            "OEF": "SPY",
+        },
+    },
+    "US Growth / Technology": {
+        "asset_class": "Growth Equity",
+        "category": "US Growth / Technology",
+        "description": "ETFs orientados a growth, Nasdaq 100 o tecnología; cada ETF se evalúa contra un proxy de estilo más cercano.",
+        "tickers": ["QQQM", "SCHG", "VUG", "IWF", "XLK", "VGT", "FTEC", "IYW"],
+        "benchmarks": {
+            "QQQM": "QQQ",
+            "SCHG": "VUG",
+            "VUG": "IWF",
+            "IWF": "VUG",
+            "XLK": "VGT",
+            "VGT": "XLK",
+            "FTEC": "VGT",
+            "IYW": "VGT",
+        },
+    },
+    "Dividend Equity": {
+        "asset_class": "Dividend Equity",
+        "category": "Dividend Equity",
+        "description": "ETFs de dividendos, calidad e income equity; se comparan contra proxies de dividend growth o dividend yield.",
+        "tickers": ["SCHD", "VIG", "DGRO", "VYM", "DVY", "SDY", "NOBL", "HDV"],
+        "benchmarks": {
+            "SCHD": "VIG",
+            "VIG": "DGRO",
+            "DGRO": "VIG",
+            "VYM": "DVY",
+            "DVY": "VYM",
+            "SDY": "NOBL",
+            "NOBL": "SDY",
+            "HDV": "VYM",
+        },
+    },
+    "Core Fixed Income": {
+        "asset_class": "Fixed Income",
+        "category": "Core Fixed Income",
+        "description": "Bloque core de renta fija agregado; útil para evaluar fondos amplios de bonos investment grade.",
+        "tickers": ["BND", "AGG", "IUSB", "SCHZ", "BIV", "GOVT"],
+        "benchmarks": {
+            "BND": "AGG",
+            "AGG": "BND",
+            "IUSB": "AGG",
+            "SCHZ": "AGG",
+            "BIV": "AGG",
+            "GOVT": "IEF",
+        },
+    },
+    "Treasury Duration": {
+        "asset_class": "Fixed Income",
+        "category": "Treasury Duration",
+        "description": "ETFs de Treasuries por tramo de duración; el benchmark proxy cambia según sensibilidad a tasas.",
+        "tickers": ["SHY", "IEI", "IEF", "TLT", "VGSH", "VGIT", "VGLT"],
+        "benchmarks": {
+            "SHY": "IEI",
+            "IEI": "SHY",
+            "IEF": "IEI",
+            "TLT": "VGLT",
+            "VGSH": "SHY",
+            "VGIT": "IEI",
+            "VGLT": "TLT",
+        },
+    },
+    "Investment Grade Credit": {
+        "asset_class": "Fixed Income",
+        "category": "Investment Grade Credit",
+        "description": "Crédito corporativo investment grade; foco en costo, liquidez, duración y comportamiento relativo.",
+        "tickers": ["LQD", "VCIT", "VCSH", "IGSB", "USIG"],
+        "benchmarks": {
+            "LQD": "VCIT",
+            "VCIT": "LQD",
+            "VCSH": "IGSB",
+            "IGSB": "VCSH",
+            "USIG": "LQD",
+        },
+    },
+    "High Yield Credit": {
+        "asset_class": "Fixed Income",
+        "category": "High Yield Credit",
+        "description": "ETFs high yield; el análisis debe tratar drawdown, liquidez y spread risk con mayor cuidado.",
+        "tickers": ["HYG", "JNK", "SHYG", "SJNK", "HYLB"],
+        "benchmarks": {
+            "HYG": "JNK",
+            "JNK": "HYG",
+            "SHYG": "HYG",
+            "SJNK": "JNK",
+            "HYLB": "HYG",
+        },
+    },
+}
+
+
+ISSUER_LINKS = {
+    "VOO": "https://investor.vanguard.com/investment-products/etfs/profile/voo",
+    "IVV": "https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf",
+    "SPLG": "https://www.ssga.com/us/en/intermediary/etfs/spdr-portfolio-sp-500-etf-splg",
+    "VTI": "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+    "ITOT": "https://www.ishares.com/us/products/239724/ishares-core-sp-total-us-stock-market-etf",
+    "SCHX": "https://www.schwabassetmanagement.com/products/schx",
+    "SCHG": "https://www.schwabassetmanagement.com/products/schg",
+    "QQQM": "https://www.invesco.com/us/financial-products/etfs/product-detail?audienceType=Investor&ticker=QQQM",
+    "SCHD": "https://www.schwabassetmanagement.com/products/schd",
+    "VIG": "https://investor.vanguard.com/investment-products/etfs/profile/vig",
+    "BND": "https://investor.vanguard.com/investment-products/etfs/profile/bnd",
+    "AGG": "https://www.ishares.com/us/products/239458/ishares-core-total-us-bond-market-etf",
+    "IUSB": "https://www.ishares.com/us/products/264615/ishares-core-total-usd-bond-market-etf",
+    "LQD": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf",
+    "VCIT": "https://investor.vanguard.com/investment-products/etfs/profile/vcit",
+    "SHY": "https://www.ishares.com/us/products/239452/ishares-1-3-year-treasury-bond-etf",
+    "IEI": "https://www.ishares.com/us/products/239455/ishares-3-7-year-treasury-bond-etf",
+    "TLT": "https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf",
+    "HYG": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf",
+    "BNDX": "https://investor.vanguard.com/investment-products/etfs/profile/bndx",
+}
