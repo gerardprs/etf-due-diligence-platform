@@ -26,6 +26,7 @@ from fund_selection.data_loader import (  # noqa: E402
     fetch_top_holdings,
 )
 from fund_selection.alpha_vantage import enrich_metadata_with_alpha_vantage  # noqa: E402
+from fund_selection.memo import generate_due_diligence_memo  # noqa: E402
 from fund_selection.pipeline import (  # noqa: E402
     build_selection_analysis,
     build_selection_analysis_from_processed,
@@ -2488,7 +2489,11 @@ def main() -> None:
 
         with tab_memo:
             render_section_heading(f"Memo preliminar: {memo_ticker}")
-            st.markdown(bundle.memos.get(memo_ticker, "Memo no disponible para este ETF."))
+            try:
+                memo_text = generate_due_diligence_memo(memo_ticker, analysis, red_flags)
+            except Exception:
+                memo_text = bundle.memos.get(memo_ticker, "Memo no disponible para este ETF.")
+            st.markdown(memo_text)
 
 
 if __name__ == "__main__":
