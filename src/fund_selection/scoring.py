@@ -68,12 +68,10 @@ def calculate_component_scores(analysis: pd.DataFrame) -> pd.DataFrame:
         + 0.20 * _score_series(scored.get("historical_cvar_95"), higher_is_better=False)
     )
 
-    beta_distance = (pd.to_numeric(scored.get("beta"), errors="coerce") - 1.0).abs()
     scored["benchmark_fit_score"] = (
-        0.35 * _score_series(scored.get("tracking_error"), higher_is_better=False)
-        + 0.25 * _score_series(scored.get("r_squared"), higher_is_better=True)
+        0.45 * _score_series(scored.get("tracking_error"), higher_is_better=False)
+        + 0.30 * _score_series(scored.get("r_squared"), higher_is_better=True)
         + 0.25 * _score_series(scored.get("information_ratio"), higher_is_better=True)
-        + 0.15 * _score_series(beta_distance, higher_is_better=False)
     )
 
     scored["liquidity_score"] = (

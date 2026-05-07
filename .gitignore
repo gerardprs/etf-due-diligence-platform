@@ -4,11 +4,13 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+node_modules/
 
 data/processed/*.csv
 data/processed/*.xlsx
 data/processed/*.parquet
 data/processed/*.json
+data/processed/alpha_vantage_cache/
 !data/processed/prices_master.csv
 !data/processed/daily_returns_master.csv
 !data/processed/fund_metadata_master.csv
@@ -17,6 +19,9 @@ data/processed/*.json
 outputs/*.csv
 outputs/*.xlsx
 outputs/*.html
+outputs/inspection/
+outputs/streamlit_logs/
+outputs/yura_cash_flow_2022_2023/
 
 .streamlit/secrets.toml
 .env

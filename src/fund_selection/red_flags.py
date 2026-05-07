@@ -12,7 +12,11 @@ DEFAULT_THRESHOLDS = {
     "min_total_assets": 500_000_000,
     "min_average_dollar_volume": 5_000_000,
     "max_tracking_error": 0.05,
+    "very_low_tracking_error": 0.01,
     "max_drawdown_floor": -0.35,
+    "high_fee_low_tracking_expense_pct": 0.40,
+    "high_trailing_pe": 30.0,
+    "high_top_10_concentration": 0.45,
 }
 
 
@@ -125,6 +129,46 @@ def generate_red_flags(
                 "High",
                 "Tracking error alto",
                 "El fondo se desvía de forma relevante frente a su benchmark asignado.",
+            )
+
+        if (
+            pd.notna(expense_ratio)
+            and pd.notna(tracking_error)
+            and expense_ratio > limits["high_fee_low_tracking_expense_pct"]
+            and tracking_error < limits["very_low_tracking_error"]
+        ):
+            _add_flag(
+                rows,
+                ticker,
+                "Medium",
+                "Costo alto con tracking muy bajo",
+                "Puede indicar exposición muy cercana al benchmark con una comisión elevada; revisar posible closet indexing o alternativa más barata.",
+            )
+
+        valuation_pe = pd.to_numeric(record.get("valuation_pe"), errors="coerce")
+        if pd.notna(valuation_pe) and valuation_pe > limits["high_trailing_pe"]:
+            _add_flag(
+                rows,
+                ticker,
+                "Low",
+                "P/E elevado",
+                "La valorización del portafolio luce exigente frente a un umbral preliminar; validar contra factsheet y peer group.",
+            )
+
+        top_10_concentration = pd.to_numeric(
+            record.get("top_10_concentration"),
+            errors="coerce",
+        )
+        if (
+            pd.notna(top_10_concentration)
+            and top_10_concentration > limits["high_top_10_concentration"]
+        ):
+            _add_flag(
+                rows,
+                ticker,
+                "Medium",
+                "Alta concentración Top 10",
+                "Las diez mayores posiciones representan una proporción elevada del ETF; revisar concentración y exposición a mega caps o emisores dominantes.",
             )
 
         max_drawdown = pd.to_numeric(record.get("max_drawdown"), errors="coerce")

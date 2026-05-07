@@ -37,6 +37,13 @@ def _number(value: object, decimals: int = 2) -> str:
     return f"{numeric:.{decimals}f}"
 
 
+def _multiple(value: object, decimals: int = 1) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "n/a"
+    return f"{numeric:.{decimals}f}x"
+
+
 def _strengths(row: pd.Series) -> list[str]:
     strengths: list[str] = []
 
@@ -52,6 +59,8 @@ def _strengths(row: pd.Series) -> list[str]:
         strengths.append("Comportamiento cercano al benchmark, útil para una exposición limpia en cartera.")
     if pd.to_numeric(row.get("sharpe_ratio"), errors="coerce") >= 0.75:
         strengths.append("Retorno ajustado por riesgo aceptable durante la ventana analizada.")
+    if pd.to_numeric(row.get("top_10_concentration"), errors="coerce") <= 0.30:
+        strengths.append("Concentración Top 10 moderada frente a un filtro preliminar.")
 
     return strengths or ["No se detecta una fortaleza cuantitativa sobresaliente; requiere contexto cualitativo adicional."]
 
@@ -103,12 +112,13 @@ def generate_due_diligence_memo(
 | Métrica | Valor |
 |---|---:|
 | CAGR | {_pct(row.get("cagr"))} |
-| Volatilidad | {_pct(row.get("volatility"))} |
-| Sharpe Ratio | {_number(row.get("sharpe_ratio"))} |
+| Alpha | {_pct(row.get("alpha"))} |
 | Sortino Ratio | {_number(row.get("sortino_ratio"))} |
 | Max Drawdown | {_pct(row.get("max_drawdown"))} |
 | Tracking Error | {_pct(row.get("tracking_error"))} |
-| Information Ratio | {_number(row.get("information_ratio"))} |
+| P/E | {_multiple(row.get("valuation_pe"))} |
+| ROE | {_pct(row.get("return_on_equity"))} |
+| Top 10 Concentration | {_pct(row.get("top_10_concentration"))} |
 | Expense Ratio | {_pct_points(row.get("expense_ratio_pct"))} |
 | AUM | {_money(row.get("total_assets"))} |
 | Volumen Promedio en USD | {_money(row.get("average_dollar_volume"))} |

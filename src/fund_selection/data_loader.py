@@ -9,6 +9,7 @@ report instead of silently accepting bad inputs.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -318,6 +319,10 @@ def fetch_fund_metadata(tickers: Iterable[str]) -> pd.DataFrame:
     for ticker in _unique_ordered(tickers):
         info: dict[str, object] = {}
         fast_info: dict[str, object] = {}
+        top_10_concentration = np.nan
+        top_10_holdings = None
+        portfolio_pe = np.nan
+        portfolio_pb = np.nan
 
         try:
             yahoo_ticker = yf.Ticker(ticker)
@@ -326,10 +331,31 @@ def fetch_fund_metadata(tickers: Iterable[str]) -> pd.DataFrame:
             info = {}
 
         try:
-            fast = yf.Ticker(ticker).fast_info
+            yahoo_ticker = yf.Ticker(ticker)
+            fast = yahoo_ticker.fast_info
             fast_info = dict(fast) if fast is not None else {}
         except Exception:
             fast_info = {}
+
+        try:
+            funds_data = yf.Ticker(ticker).funds_data
+            top_holdings = funds_data.top_holdings
+            if isinstance(top_holdings, pd.DataFrame) and "Holding Percent" in top_holdings.columns:
+                top_10_concentration = pd.to_numeric(
+                    top_holdings["Holding Percent"].head(10),
+                    errors="coerce",
+                ).sum(min_count=1)
+                top_10_holdings = serialize_top_holdings(top_holdings)
+
+            equity_holdings = funds_data.equity_holdings
+            if isinstance(equity_holdings, pd.DataFrame) and ticker in equity_holdings.columns:
+                values = pd.to_numeric(equity_holdings[ticker], errors="coerce")
+                raw_pe = values.get("Price/Earnings", np.nan)
+                raw_pb = values.get("Price/Book", np.nan)
+                portfolio_pe = _normalize_yahoo_valuation_ratio(raw_pe)
+                portfolio_pb = _normalize_yahoo_valuation_ratio(raw_pb)
+        except Exception:
+            pass
 
         records.append(
             {
@@ -350,11 +376,93 @@ def fetch_fund_metadata(tickers: Iterable[str]) -> pd.DataFrame:
                 or info.get("averageDailyVolume10Day")
                 or fast_info.get("tenDayAverageVolume"),
                 "last_price": fast_info.get("lastPrice") or info.get("regularMarketPrice"),
+                "trailing_pe": info.get("trailingPE"),
+                "forward_pe": info.get("forwardPE"),
+                "price_to_book": info.get("priceToBook"),
+                "portfolio_pe": portfolio_pe,
+                "portfolio_price_to_book": portfolio_pb,
+                "return_on_equity": info.get("returnOnEquity"),
+                "dividend_yield": info.get("dividendYield") or info.get("yield"),
+                "top_10_concentration": top_10_concentration,
+                "top_10_holdings": top_10_holdings,
                 "metadata_available": bool(info or fast_info),
             }
         )
 
     return pd.DataFrame.from_records(records)
+
+
+def serialize_top_holdings(top_holdings: pd.DataFrame, limit: int = 10) -> str | None:
+    """Serialize vendor top holdings into a stable JSON payload for snapshots."""
+
+    if not isinstance(top_holdings, pd.DataFrame) or top_holdings.empty:
+        return None
+
+    records: list[dict[str, object]] = []
+    for symbol, row in top_holdings.head(limit).iterrows():
+        weight = pd.to_numeric(row.get("Holding Percent"), errors="coerce")
+        records.append(
+            {
+                "symbol": str(symbol).upper() if pd.notna(symbol) else "",
+                "name": row.get("Name"),
+                "weight": float(weight) if pd.notna(weight) else np.nan,
+            }
+        )
+
+    if not records:
+        return None
+    return json.dumps(records, ensure_ascii=False)
+
+
+def fetch_top_holdings(ticker: str, limit: int = 10) -> pd.DataFrame:
+    """Fetch a display-ready Top Holdings table from Yahoo Finance.
+
+    This is used as an on-demand fallback when an older local snapshot has only
+    the Top 10 concentration percentage but not the underlying names.
+    """
+
+    columns = ["symbol", "name", "weight"]
+    if yf is None:
+        return pd.DataFrame(columns=columns)
+
+    try:
+        funds_data = yf.Ticker(str(ticker).upper()).funds_data
+        top_holdings = funds_data.top_holdings
+    except Exception:
+        return pd.DataFrame(columns=columns)
+
+    if not isinstance(top_holdings, pd.DataFrame) or top_holdings.empty:
+        return pd.DataFrame(columns=columns)
+
+    records: list[dict[str, object]] = []
+    for symbol, row in top_holdings.head(limit).iterrows():
+        weight = pd.to_numeric(row.get("Holding Percent"), errors="coerce")
+        records.append(
+            {
+                "symbol": str(symbol).upper() if pd.notna(symbol) else "",
+                "name": row.get("Name"),
+                "weight": float(weight) if pd.notna(weight) else np.nan,
+            }
+        )
+
+    return pd.DataFrame.from_records(records, columns=columns)
+
+
+def _normalize_yahoo_valuation_ratio(raw_value: object) -> float:
+    """Normalize Yahoo ETF valuation fields into familiar valuation multiples.
+
+    Yahoo's `funds_data.equity_holdings` often exposes P/E and P/B as a decimal
+    yield-like value. For example, a value around 0.04 is more useful as an
+    earnings-yield proxy, so the comparable P/E multiple is approximately
+    `1 / 0.04 = 25x`. If Yahoo returns an already familiar multiple, keep it.
+    """
+
+    value = pd.to_numeric(raw_value, errors="coerce")
+    if pd.isna(value) or value <= 0:
+        return np.nan
+    if value < 1:
+        return float(1.0 / value)
+    return float(value)
 
 
 def build_data_snapshot(

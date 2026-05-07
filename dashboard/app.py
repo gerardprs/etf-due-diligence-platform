@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from html import escape
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -21,7 +23,9 @@ from fund_selection.data_loader import (  # noqa: E402
     calculate_daily_returns,
     download_price_history,
     fetch_fund_metadata,
+    fetch_top_holdings,
 )
+from fund_selection.alpha_vantage import enrich_metadata_with_alpha_vantage  # noqa: E402
 from fund_selection.pipeline import (  # noqa: E402
     build_selection_analysis,
     build_selection_analysis_from_processed,
@@ -30,6 +34,19 @@ from fund_selection.pipeline import (  # noqa: E402
 
 PROCESSED_DIR = ROOT / "data" / "processed"
 RAW_UNIVERSE_PATH = ROOT / "data" / "raw" / "fund_universe.csv"
+CHART_COLORWAY = [
+    "#0b6f69",
+    "#1f3a4a",
+    "#a66f00",
+    "#9f2f2f",
+    "#356b9a",
+    "#6b5b95",
+    "#2f7d59",
+    "#b36b00",
+]
+CHART_BG = "#ffffff"
+CHART_GRID = "#e7ebef"
+CHART_FONT = "#20242a"
 
 MANDATE_PRESETS = {
     "US Large Cap Core": {
@@ -184,6 +201,13 @@ def _format_money(value: object) -> str:
     return f"${numeric:,.0f}"
 
 
+def _format_multiple(value: object, decimals: int = 1) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "n/a"
+    return f"{numeric:.{decimals}f}x"
+
+
 def _ensure_processed_files() -> None:
     required_files = [
         PROCESSED_DIR / "fund_universe_validated.csv",
@@ -258,6 +282,11 @@ def build_from_master_snapshot(
     metadata["ticker"] = metadata["ticker"].astype(str).str.upper()
     selected_funds = universe["ticker"].astype(str).str.upper().tolist()
     metadata = metadata.loc[metadata["ticker"].isin(selected_funds)].copy()
+    metadata = enrich_metadata_with_alpha_vantage(
+        metadata,
+        project_root=ROOT,
+        max_api_requests=3,
+    )
 
     return build_selection_analysis(
         universe=universe,
@@ -327,6 +356,11 @@ def load_custom_dashboard_data(
     universe = universe.loc[universe["ticker"].isin(available_funds)].reset_index(drop=True)
     returns = calculate_daily_returns(prices)
     metadata = fetch_fund_metadata(available_funds)
+    metadata = enrich_metadata_with_alpha_vantage(
+        metadata,
+        project_root=ROOT,
+        max_api_requests=3,
+    )
 
     return build_selection_analysis(
         universe=universe,
@@ -343,12 +377,19 @@ def apply_theme() -> None:
         :root {
             --bg: #f6f7f9;
             --surface: #ffffff;
+            --surface-2: #f3f5f7;
             --ink: #20242a;
             --muted: #626a73;
             --line: #d8dde3;
+            --line-strong: #c5ccd4;
             --teal: #0b6f69;
+            --teal-soft: #e7f3f1;
+            --navy: #18313f;
             --gold: #a66f00;
+            --gold-soft: #f6efe0;
             --red: #9f2f2f;
+            --red-soft: #f6e7e7;
+            --shadow: 0 10px 26px rgba(24, 49, 63, 0.08);
         }
         .stApp {
             background: var(--bg);
@@ -364,7 +405,7 @@ def apply_theme() -> None:
             letter-spacing: 0;
         }
         h1 {
-            font-size: 2rem;
+            font-size: 2.05rem;
             font-weight: 720;
             margin-bottom: 0.15rem;
         }
@@ -375,11 +416,171 @@ def apply_theme() -> None:
         h3 {
             font-size: 1rem;
         }
+        .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin: 1.25rem 0 0.45rem 0;
+            font-size: 1.05rem;
+            font-weight: 760;
+            color: var(--ink);
+        }
+        .section-heading::before {
+            content: "";
+            width: 4px;
+            height: 1.15rem;
+            border-radius: 8px;
+            background: var(--teal);
+        }
+        .hero-panel {
+            background: linear-gradient(135deg, #173544 0%, #15313d 100%);
+            border: 1px solid #244d5d;
+            border-radius: 8px;
+            padding: 1.35rem 1.45rem;
+            box-shadow: var(--shadow);
+            margin: 0.6rem 0 1rem 0;
+        }
+        .hero-kicker {
+            color: #a9c4c1;
+            font-size: 0.76rem;
+            font-weight: 760;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            margin-bottom: 0.35rem;
+        }
+        .hero-kicker a {
+            color: #dbe6e8;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(219,230,232,0.45);
+        }
+        .hero-kicker a:hover {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+        .hero-title {
+            color: #ffffff;
+            font-size: 1.45rem;
+            font-weight: 780;
+            line-height: 1.25;
+            margin-bottom: 0.45rem;
+        }
+        .hero-copy {
+            color: #dbe6e8;
+            font-size: 0.96rem;
+            line-height: 1.45;
+            max-width: 980px;
+            margin-bottom: 0.8rem;
+        }
+        .pill-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .pill {
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08);
+            color: #f4faf9;
+            border-radius: 999px;
+            padding: 0.32rem 0.62rem;
+            font-size: 0.78rem;
+            font-weight: 650;
+        }
+        .workflow-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-top: 3px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.95rem 1rem;
+            min-height: 118px;
+            box-shadow: 0 6px 18px rgba(24, 49, 63, 0.05);
+            margin-bottom: 0.75rem;
+        }
+        .workflow-card.gold {
+            border-top-color: var(--gold);
+        }
+        .workflow-card.red {
+            border-top-color: var(--red);
+        }
+        .workflow-number {
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .workflow-title {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 760;
+            margin-top: 0.2rem;
+        }
+        .workflow-copy {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.35;
+            margin-top: 0.28rem;
+        }
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.9rem 1rem;
+            box-shadow: 0 8px 22px rgba(24, 49, 63, 0.06);
+            min-height: 100px;
+            margin-bottom: 0.55rem;
+        }
+        .kpi-card.gold {
+            border-left-color: var(--gold);
+        }
+        .kpi-card.red {
+            border-left-color: var(--red);
+        }
+        .kpi-card.slate {
+            border-left-color: var(--navy);
+        }
+        .kpi-label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 720;
+            text-transform: uppercase;
+        }
+        .kpi-value {
+            color: var(--ink);
+            font-size: 1.55rem;
+            font-weight: 780;
+            line-height: 1.2;
+            margin-top: 0.3rem;
+        }
+        .kpi-helper {
+            color: var(--muted);
+            font-size: 0.8rem;
+            margin-top: 0.28rem;
+        }
+        .analysis-strip {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.9rem 1rem;
+            box-shadow: 0 6px 18px rgba(24, 49, 63, 0.05);
+            margin: 0.55rem 0 0.95rem 0;
+        }
+        .analysis-strip-title {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 760;
+        }
+        .analysis-strip-copy {
+            color: var(--muted);
+            font-size: 0.86rem;
+            margin-top: 0.25rem;
+        }
         [data-testid="stMetric"] {
             background: var(--surface);
             border: 1px solid var(--line);
             border-radius: 8px;
             padding: 0.85rem 1rem;
+            box-shadow: 0 8px 22px rgba(24, 49, 63, 0.06);
         }
         [data-testid="stMetricLabel"] {
             color: var(--muted);
@@ -393,10 +594,225 @@ def apply_theme() -> None:
             border: 1px solid var(--line);
             border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 6px 18px rgba(24, 49, 63, 0.04);
         }
         section[data-testid="stSidebar"] {
             background: #eef1f4;
             border-right: 1px solid var(--line);
+        }
+        section[data-testid="stSidebar"] * {
+            color: var(--ink);
+        }
+        div[data-testid="stTabs"] button {
+            font-weight: 650;
+            color: var(--muted);
+        }
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--teal);
+            border-bottom-color: var(--teal);
+        }
+        div.stButton > button {
+            background: var(--surface) !important;
+            border: 1px solid var(--line-strong) !important;
+            border-radius: 8px !important;
+            color: var(--ink) !important;
+            font-weight: 680;
+        }
+        div.stButton > button p {
+            color: var(--ink) !important;
+        }
+        div.stButton > button[kind="primary"] {
+            background: var(--teal) !important;
+            border: 1px solid var(--teal) !important;
+            border-radius: 8px !important;
+            font-weight: 720;
+        }
+        div.stButton > button[kind="primary"] p {
+            color: #ffffff !important;
+        }
+        div.stButton > button[kind="secondary"] {
+            border-radius: 8px;
+            border-color: var(--line-strong);
+        }
+        div[data-baseweb="select"] > div {
+            background: var(--surface-2);
+            border-color: var(--line);
+            color: var(--ink);
+        }
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div {
+            color: var(--ink);
+        }
+        .stAlert {
+            border-radius: 8px;
+        }
+        .source-link {
+            display: block;
+            width: 100%;
+            padding: 0.82rem 0.9rem;
+            border: 1px solid var(--line-strong);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--teal) !important;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 720;
+            box-shadow: 0 8px 22px rgba(24, 49, 63, 0.06);
+        }
+        .source-link:hover {
+            border-color: var(--teal);
+            background: var(--teal-soft);
+            color: var(--teal) !important;
+        }
+        .spacer-md {
+            height: 0.85rem;
+        }
+        .etf-description {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            color: var(--muted);
+            margin: 0.35rem 0 0.95rem 0;
+            box-shadow: 0 8px 22px rgba(24, 49, 63, 0.06);
+        }
+        .etf-description strong {
+            color: var(--ink);
+        }
+        .rail-panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+            box-shadow: var(--shadow);
+            margin: 0.6rem 0 0.85rem 0;
+        }
+        .rail-kicker {
+            color: var(--teal);
+            font-size: 0.74rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .rail-title {
+            color: var(--ink);
+            font-size: 1.16rem;
+            font-weight: 780;
+            line-height: 1.25;
+            margin-top: 0.2rem;
+        }
+        .rail-copy {
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.38;
+            margin-top: 0.45rem;
+        }
+        .rail-divider {
+            height: 1px;
+            background: var(--line);
+            margin: 0.85rem 0;
+        }
+        .rail-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin-top: 0.75rem;
+        }
+        .rail-metric {
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.65rem 0.7rem;
+        }
+        .rail-label {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 720;
+            text-transform: uppercase;
+        }
+        .rail-value {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 780;
+            margin-top: 0.18rem;
+        }
+        .rail-note {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.35;
+            margin-top: 0.55rem;
+        }
+        div[data-testid="column"]:has(.rail-panel) {
+            position: sticky;
+            top: 1.1rem;
+            align-self: flex-start;
+            max-height: calc(100vh - 1.6rem);
+            overflow-y: auto;
+            padding-bottom: 0.6rem;
+            z-index: 20;
+        }
+        div[data-testid="column"]:has(.rail-panel) > div[data-testid="stVerticalBlock"] {
+            gap: 0.72rem;
+        }
+        .result-panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 1rem 1.15rem;
+            box-shadow: var(--shadow);
+            margin: 0.6rem 0 1rem 0;
+        }
+        .result-title {
+            color: var(--ink);
+            font-size: 1.25rem;
+            font-weight: 780;
+            line-height: 1.25;
+        }
+        .result-copy {
+            color: var(--muted);
+            font-size: 0.91rem;
+            line-height: 1.42;
+            margin-top: 0.35rem;
+        }
+        .quick-read-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.7rem;
+            margin: 0.85rem 0 0.2rem 0;
+        }
+        .quick-read-card {
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.72rem 0.78rem;
+            min-height: 76px;
+        }
+        .quick-read-label {
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 720;
+            text-transform: uppercase;
+        }
+        .quick-read-value {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 760;
+            margin-top: 0.2rem;
+        }
+        @media (max-width: 900px) {
+            div[data-testid="column"]:has(.rail-panel) {
+                position: static;
+                max-height: none;
+                overflow-y: visible;
+            }
+            div[data-testid="column"]:has(.rail-panel) > div[data-testid="stVerticalBlock"] {
+                gap: 0.7rem;
+            }
+            .quick-read-grid,
+            .rail-metric-grid {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
         """,
@@ -432,10 +848,13 @@ def score_bar_chart(analysis: pd.DataFrame) -> go.Figure:
         margin=dict(l=20, r=20, t=10, b=20),
         xaxis=dict(range=[0, 100], title="Fund Selection Score"),
         yaxis=dict(title=""),
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
+        plot_bgcolor=CHART_BG,
+        paper_bgcolor=CHART_BG,
+        font=dict(color=CHART_FONT),
         showlegend=False,
     )
+    fig.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
+    fig.update_yaxes(gridcolor=CHART_GRID)
     return fig
 
 
@@ -444,17 +863,14 @@ def cumulative_chart(
     selected_tickers: list[str],
     benchmark_map: dict[str, str],
 ) -> go.Figure:
-    columns = []
-    for ticker in selected_tickers:
-        columns.append(ticker)
-        benchmark = benchmark_map.get(ticker)
-        if benchmark:
-            columns.append(benchmark)
-
-    columns = [column for index, column in enumerate(columns) if column in cumulative.columns and column not in columns[:index]]
+    columns = resolve_comparison_columns(
+        selected_tickers,
+        benchmark_map,
+        cumulative.columns,
+    )
 
     fig = go.Figure()
-    for column in columns:
+    for index, column in enumerate(columns):
         dash = "dash" if column not in selected_tickers else "solid"
         fig.add_trace(
             go.Scatter(
@@ -462,7 +878,11 @@ def cumulative_chart(
                 y=cumulative[column] * 100.0,
                 mode="lines",
                 name=column,
-                line=dict(width=2.4 if dash == "solid" else 1.6, dash=dash),
+                line=dict(
+                    width=2.6 if dash == "solid" else 1.8,
+                    dash=dash,
+                    color=CHART_COLORWAY[index % len(CHART_COLORWAY)],
+                ),
                 hovertemplate=f"<b>{column}</b><br>%{{x|%Y-%m-%d}}<br>%{{y:.1f}}%<extra></extra>",
             )
         )
@@ -472,11 +892,90 @@ def cumulative_chart(
         margin=dict(l=20, r=20, t=10, b=25),
         yaxis_title="Retorno Acumulado",
         xaxis_title="",
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
+        plot_bgcolor=CHART_BG,
+        paper_bgcolor=CHART_BG,
+        font=dict(color=CHART_FONT),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
     )
+    fig.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
+    fig.update_yaxes(gridcolor=CHART_GRID, zeroline=False)
     return fig
+
+
+def resolve_comparison_columns(
+    selected_tickers: list[str],
+    benchmark_map: dict[str, str],
+    available_columns: pd.Index,
+) -> list[str]:
+    """Return selected ETFs plus their benchmarks, preserving a clean order."""
+
+    columns: list[str] = []
+    for ticker in selected_tickers:
+        columns.append(ticker)
+        benchmark = benchmark_map.get(ticker)
+        if benchmark:
+            columns.append(benchmark)
+
+    available = set(available_columns)
+    return [
+        column
+        for index, column in enumerate(columns)
+        if column in available and column not in columns[:index]
+    ]
+
+
+def date_window_from_preset(
+    preset: str,
+    min_date: pd.Timestamp,
+    max_date: pd.Timestamp,
+) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """Resolve a chart date preset into a valid data window."""
+
+    if preset == "YTD":
+        start = pd.Timestamp(year=max_date.year, month=1, day=1)
+    elif preset in {"Último año", "Ultimo ano"}:
+        start = max_date - pd.DateOffset(years=1)
+    elif preset in {"Últimos 3 años", "Ultimos 3 anos"}:
+        start = max_date - pd.DateOffset(years=3)
+    else:
+        start = min_date
+
+    return max(start, min_date), max_date
+
+
+def rebase_cumulative_window(
+    cumulative: pd.DataFrame,
+    columns: list[str],
+    start_date: object,
+    end_date: object,
+) -> pd.DataFrame:
+    """Filter a cumulative-return matrix and reset each series to 0% at start.
+
+    This is the correct display treatment for date-window analysis. If we only
+    sliced the original cumulative return path, each line would still include
+    performance from before the selected start date.
+    """
+
+    start = pd.Timestamp(start_date)
+    end = pd.Timestamp(end_date)
+    window = cumulative.loc[
+        (cumulative.index >= start) & (cumulative.index <= end),
+        columns,
+    ].copy()
+
+    if window.empty:
+        return window
+
+    rebased = pd.DataFrame(index=window.index)
+    for column in window.columns:
+        series = window[column].dropna()
+        if series.empty:
+            rebased[column] = window[column]
+            continue
+        base_value = 1.0 + series.iloc[0]
+        rebased[column] = (1.0 + window[column]) / base_value - 1.0
+
+    return rebased
 
 
 def drawdown_chart(drawdowns: pd.DataFrame, selected_ticker: str) -> go.Figure:
@@ -499,28 +998,170 @@ def drawdown_chart(drawdowns: pd.DataFrame, selected_ticker: str) -> go.Figure:
         margin=dict(l=20, r=20, t=10, b=25),
         yaxis_title="Drawdown",
         xaxis_title="",
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
+        plot_bgcolor=CHART_BG,
+        paper_bgcolor=CHART_BG,
+        font=dict(color=CHART_FONT),
         showlegend=False,
     )
+    fig.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
+    fig.update_yaxes(gridcolor=CHART_GRID, zeroline=False)
     return fig
+
+
+def top_10_concentration_chart(
+    row: pd.Series,
+    holdings_table: pd.DataFrame | None = None,
+) -> go.Figure:
+    """Render a donut chart breaking out the five largest holdings."""
+
+    concentration = pd.to_numeric(row.get("top_10_concentration"), errors="coerce")
+    if holdings_table is not None and not holdings_table.empty:
+        top_holdings = holdings_table.head(5).copy()
+        top_holdings["Peso"] = pd.to_numeric(top_holdings["Peso"], errors="coerce")
+        top_holdings = top_holdings.dropna(subset=["Peso"])
+    else:
+        top_holdings = pd.DataFrame(columns=["Ticker", "Peso"])
+
+    if pd.isna(concentration) and not top_holdings.empty:
+        concentration = top_holdings["Peso"].sum() / 100.0
+
+    if pd.isna(concentration):
+        labels = ["Dato no disponible"]
+        values = [1.0]
+        colors = ["#d8dde3"]
+        center_text = "n/a"
+    else:
+        concentration = min(max(float(concentration), 0.0), 1.0)
+        top_values = (top_holdings["Peso"] / 100.0).clip(lower=0.0).tolist()
+        top_labels = top_holdings["Ticker"].astype(str).tolist()
+        top_5_total = float(sum(top_values))
+        other_top_10 = max(concentration - top_5_total, 0.0)
+        rest_of_etf = max(1.0 - concentration, 0.0)
+
+        labels = [*top_labels]
+        values = [*top_values]
+        if other_top_10 > 0.001:
+            labels.append("Otros Top 10")
+            values.append(other_top_10)
+        labels.append("Resto del ETF")
+        values.append(rest_of_etf)
+        colors = [
+            "#0b6f69",
+            "#356b9a",
+            "#a66f00",
+            "#9f2f2f",
+            "#6b5b95",
+            "#8aa39b",
+            "#d8dde3",
+        ][: len(labels)]
+        center_text = f"Top 10<br>{concentration * 100:.1f}%"
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.68,
+                marker=dict(colors=colors),
+                textinfo="none",
+                hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
+                sort=False,
+            )
+        ]
+    )
+    fig.update_layout(
+        height=370,
+        margin=dict(l=20, r=20, t=10, b=72),
+        paper_bgcolor=CHART_BG,
+        font=dict(color=CHART_FONT),
+        annotations=[
+            dict(
+                text=center_text,
+                x=0.5,
+                y=0.5,
+                font=dict(size=18, color=CHART_FONT),
+                showarrow=False,
+            )
+        ],
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.08,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=11, color=CHART_FONT),
+        ),
+    )
+    return fig
+
+
+def parse_serialized_holdings(value: object) -> pd.DataFrame:
+    """Parse a stored Top 10 holdings payload into a table."""
+
+    columns = ["symbol", "name", "weight"]
+    if value is None:
+        return pd.DataFrame(columns=columns)
+
+    text_value = str(value).strip()
+    if not text_value or text_value.lower() in {"nan", "<na>", "none"}:
+        return pd.DataFrame(columns=columns)
+
+    try:
+        records = json.loads(text_value)
+    except (TypeError, json.JSONDecodeError):
+        return pd.DataFrame(columns=columns)
+
+    if not isinstance(records, list):
+        return pd.DataFrame(columns=columns)
+
+    table = pd.DataFrame.from_records(records)
+    if table.empty:
+        return pd.DataFrame(columns=columns)
+
+    for column in columns:
+        if column not in table.columns:
+            table[column] = pd.NA
+
+    table["symbol"] = table["symbol"].astype(str).str.upper()
+    table["weight"] = pd.to_numeric(table["weight"], errors="coerce")
+    return table[columns].head(10)
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_top_holdings_table(ticker: str, serialized_holdings: object) -> pd.DataFrame:
+    """Load Top 10 holdings from local payload, with Yahoo as a selected-ETF fallback."""
+
+    table = parse_serialized_holdings(serialized_holdings)
+    if table.empty:
+        table = fetch_top_holdings(ticker, limit=10)
+
+    if table.empty:
+        return pd.DataFrame(columns=["#", "Ticker", "Nombre", "Peso"])
+
+    output = table.copy()
+    output.insert(0, "#", range(1, len(output) + 1))
+    output["Peso"] = pd.to_numeric(output["weight"], errors="coerce") * 100.0
+    output = output.rename(columns={"symbol": "Ticker", "name": "Nombre"})
+    return output[["#", "Ticker", "Nombre", "Peso"]]
 
 
 def metric_table(row: pd.Series) -> pd.DataFrame:
     return pd.DataFrame(
         [
-            ("CAGR", _format_pct(row.get("cagr"))),
-            ("Volatilidad", _format_pct(row.get("volatility"))),
-            ("Sharpe Ratio", f"{pd.to_numeric(row.get('sharpe_ratio'), errors='coerce'):.2f}"),
-            ("Sortino Ratio", f"{pd.to_numeric(row.get('sortino_ratio'), errors='coerce'):.2f}"),
-            ("Max Drawdown", _format_pct(row.get("max_drawdown"))),
-            ("Tracking Error", _format_pct(row.get("tracking_error"))),
-            ("Information Ratio", f"{pd.to_numeric(row.get('information_ratio'), errors='coerce'):.2f}"),
-            ("Expense Ratio", _format_pct_points(row.get("expense_ratio_pct"))),
-            ("AUM", _format_money(row.get("total_assets"))),
-            ("Volumen Promedio USD", _format_money(row.get("average_dollar_volume"))),
+            ("CAGR", _format_pct(row.get("cagr")), "Crecimiento compuesto anualizado del ETF."),
+            ("Alpha", _format_pct(row.get("alpha")), "Retorno ajustado por beta frente al benchmark."),
+            ("Sortino Ratio", f"{pd.to_numeric(row.get('sortino_ratio'), errors='coerce'):.2f}", "Retorno ajustado solo por volatilidad negativa."),
+            ("Max Drawdown", _format_pct(row.get("max_drawdown")), "Mayor caída histórica desde pico a valle."),
+            ("Tracking Error", _format_pct(row.get("tracking_error")), "Desviación del ETF frente a su benchmark."),
+            ("P/E", _format_multiple(row.get("valuation_pe")), "Valorización aproximada del portafolio del ETF."),
+            ("ROE", _format_pct(row.get("return_on_equity")), "Rentabilidad sobre patrimonio de las compañías subyacentes, si está disponible."),
+            ("Top 10 Concentration", _format_pct(row.get("top_10_concentration")), "Peso de las diez mayores posiciones del ETF."),
+            ("TER", _format_pct_points(row.get("expense_ratio_pct")), "Total Expense Ratio anual del ETF según metadata disponible."),
+            ("AUM", _format_money(row.get("total_assets")), "Activos bajo gestión; proxy de escala y estabilidad."),
+            ("Volumen Promedio USD", _format_money(row.get("average_dollar_volume")), "Proxy de liquidez operativa diaria."),
         ],
-        columns=["Métrica", "Valor"],
+        columns=["Métrica", "Valor", "Descripción"],
     )
 
 
@@ -537,6 +1178,63 @@ def enrich_with_source_links(analysis: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 
+def ensure_dashboard_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Ensure optional dashboard columns exist even when cached data is older."""
+
+    output = frame.copy()
+    for column in columns:
+        if column not in output.columns:
+            output[column] = pd.NA
+    return output
+
+
+def render_section_heading(title: str) -> None:
+    """Render a compact institutional section heading."""
+
+    st.markdown(
+        f'<div class="section-heading">{escape(title)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_kpi_card(
+    label: str,
+    value: object,
+    helper: str = "",
+    accent: str = "teal",
+) -> None:
+    """Render an executive KPI card with a controlled accent color."""
+
+    allowed_accents = {"teal", "gold", "red", "slate"}
+    accent_class = accent if accent in allowed_accents else "teal"
+    helper_html = (
+        f'<div class="kpi-helper">{escape(str(helper))}</div>' if helper else ""
+    )
+    st.markdown(
+        f"""
+        <div class="kpi-card {accent_class}">
+            <div class="kpi-label">{escape(label)}</div>
+            <div class="kpi-value">{escape(str(value))}</div>
+            {helper_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def recommendation_accent(value: object) -> str:
+    """Map the recommendation label into an executive-card accent."""
+
+    recommendation = str(value)
+    if recommendation == "Preferido":
+        return "teal"
+    if recommendation == "Aprobado":
+        return "slate"
+    if recommendation == "En observación":
+        return "gold"
+    return "red"
+
+
 def render_external_link(label: str, url: object) -> None:
     """Render an external link that works reliably in embedded browsers."""
 
@@ -548,22 +1246,10 @@ def render_external_link(label: str, url: object) -> None:
     safe_label = escape(label)
     st.markdown(
         f"""
-        <a href="{safe_url}" target="_self" style="
-            display: block;
-            width: 100%;
-            padding: 0.7rem 0.9rem;
-            border: 1px solid #d8dde3;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #0b6f69;
-            text-align: center;
-            text-decoration: none;
-            font-weight: 650;
-        ">{safe_label}</a>
+        <a href="{safe_url}" target="_blank" class="source-link">{safe_label}</a>
         """,
         unsafe_allow_html=True,
     )
-    st.caption(str(url))
 
 
 def render_score_explanation() -> None:
@@ -582,14 +1268,14 @@ def render_score_explanation() -> None:
         [
             ("Performance", "25%", "CAGR y Sharpe: crecimiento y retorno ajustado por riesgo."),
             ("Riesgo", "25%", "Volatilidad, Sortino, max drawdown y CVaR."),
-            ("Benchmark fit", "20%", "Tracking error, R², information ratio y beta vs benchmark."),
+            ("Benchmark fit", "20%", "Tracking error, R² e information ratio vs benchmark."),
             ("Liquidez", "15%", "AUM y volumen promedio en dólares."),
             ("Costo", "15%", "Expense ratio relativo dentro del peer group."),
-            ("Penalizaciones", "Hasta -30 pts", "Alertas por drawdown, tracking error, costo, liquidez o data faltante."),
+            ("Penalizaciones", "Hasta -30 pts", "Alertas por drawdown, tracking, costo, liquidez, P/E o concentración."),
         ],
         columns=["Componente", "Peso", "Qué captura"],
     )
-    st.dataframe(weights, hide_index=True, use_container_width=True)
+    st.dataframe(weights, hide_index=True, width="stretch")
 
     st.markdown("**Fórmulas por componente:**")
 
@@ -632,13 +1318,12 @@ def render_score_explanation() -> None:
 
             ```text
             Benchmark Fit Score =
-              35% * Score(menor Tracking Error)
-            + 25% * Score(R²)
+              45% * Score(menor Tracking Error)
+            + 30% * Score(R²)
             + 25% * Score(Information Ratio)
-            + 15% * Score(Beta cercano a 1)
             ```
 
-            Un ETF core debería tener tracking error bajo, alta relación con su benchmark y beta razonablemente cercana a 1.
+            Un ETF core debería tener tracking error bajo y alta relación con su benchmark. El beta se calcula, pero no se premia automáticamente porque algunos mandatos smart beta o defensivos pueden buscar beta distinto de 1.
             """
         )
 
@@ -683,7 +1368,7 @@ def render_score_explanation() -> None:
             Penalización máxima = -30 puntos
             ```
 
-            Ejemplos: tracking error alto, drawdown elevado, CAGR negativo, baja liquidez, AUM bajo, costo alto o metadata faltante.
+            Ejemplos: tracking error alto, drawdown elevado, CAGR negativo, baja liquidez, AUM bajo, costo alto, P/E elevado, concentración Top 10 o metadata faltante.
             """
         )
 
@@ -713,41 +1398,217 @@ def render_score_explanation() -> None:
         - **En observación:** requiere revisión adicional antes de avanzar.
         - **No prioritario:** no destaca dentro del peer group seleccionado.
         """
-    )
+        )
 
 
-def render_intro() -> None:
-    """Render the public-facing framing before the analytics workflow."""
-
-    st.title("Plataforma de Selección de ETFs")
-    st.caption("Hecho por Gerardo | Data Analytics + Investment Analytics")
+def render_score_methodology_summary() -> None:
+    """Render a concise, recruiter-friendly score explanation."""
 
     st.markdown(
         """
-        Esta herramienta simula un flujo de **preliminary due diligence** para comparar ETFs desde una perspectiva de portfolio advisory. El objetivo es ordenar alternativas por performance, riesgo, ajuste al benchmark, liquidez, costo y alertas cuantitativas antes de pasar a una revisión cualitativa.
-
-        **No constituye recomendación de inversión.** Los resultados son educativos y dependen de datos públicos. Antes de invertir, se debe revisar la ficha oficial del emisor, metodología del índice, holdings, spreads, impuestos, suitability y restricciones del cliente.
+        El score es un **ranking de due diligence**, no una recomendación. Primero compara cada ETF contra su benchmark asignado usando retornos históricos; luego ordena los ETFs del mismo mandato.
         """
     )
+    methodology = pd.DataFrame(
+        [
+            ("Performance", "25%", "CAGR y Sharpe"),
+            ("Riesgo", "25%", "Volatilidad, Sortino, drawdown y CVaR"),
+            ("Benchmark fit", "20%", "Tracking error, R² e information ratio"),
+            ("Liquidez", "15%", "AUM y volumen promedio en dólares"),
+            ("Costo", "15%", "Expense ratio"),
+            ("Penalizaciones", "Hasta -30 pts", "Red flags de riesgo, liquidez, costo, P/E o concentración"),
+        ],
+        columns=["Bloque", "Peso", "Qué revisa"],
+    )
+    st.dataframe(methodology, hide_index=True, width="stretch")
+    st.caption(
+        "Fórmula resumida: score ponderado de los cinco bloques menos penalizaciones por red flags."
+    )
 
-    with st.expander("Base teórica del análisis"):
+
+def score_audit_table(row: pd.Series) -> pd.DataFrame:
+    """Build a transparent score contribution table for one ETF."""
+
+    rows = [
+        ("Performance", 0.25, row.get("performance_score")),
+        ("Riesgo", 0.25, row.get("risk_score")),
+        ("Benchmark fit", 0.20, row.get("benchmark_fit_score")),
+        ("Liquidez", 0.15, row.get("liquidity_score")),
+        ("Costo", 0.15, row.get("cost_score")),
+    ]
+    audit = pd.DataFrame(rows, columns=["Componente", "Peso", "Score componente"])
+    audit["Score componente"] = pd.to_numeric(audit["Score componente"], errors="coerce")
+    audit["Contribución"] = audit["Peso"] * audit["Score componente"]
+    penalty = pd.to_numeric(row.get("red_flag_penalty"), errors="coerce")
+    penalty = 0.0 if pd.isna(penalty) else float(penalty)
+    audit.loc[len(audit)] = ["Penalización red flags", np.nan, -penalty, -penalty]
+    return audit
+
+
+def render_score_audit(row: pd.Series) -> None:
+    """Render the hidden score calculation audit for an analyst reviewer."""
+
+    with st.expander("Ver auditoría del cálculo del score"):
+        st.markdown(
+            f"""
+            **ETF evaluado:** `{row.get("ticker")}` | **Score final:** `{pd.to_numeric(row.get("fund_selection_score"), errors="coerce"):.1f}`
+
+            El score final sale de ponderar cinco bloques cuantitativos y restar penalizaciones por red flags.
+            """
+        )
+        audit = score_audit_table(row)
+        st.dataframe(
+            audit,
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "Componente": st.column_config.TextColumn("Componente"),
+                "Peso": st.column_config.NumberColumn("Peso", format="%.0%"),
+                "Score componente": st.column_config.NumberColumn("Score componente", format="%.1f"),
+                "Contribución": st.column_config.NumberColumn("Contribución", format="%.1f"),
+            },
+        )
+        st.caption(
+            "Los scores por componente se normalizan de forma relativa dentro del peer group seleccionado. "
+            "Esto permite auditar por qué un ETF lidera o queda rezagado."
+        )
+
+
+def render_etf_description(row: pd.Series) -> None:
+    """Render a compact ETF identity block below the selector."""
+
+    ticker = str(row.get("ticker", "")).upper()
+    name = row.get("name")
+    benchmark = row.get("benchmark_ticker")
+    asset_class = row.get("asset_class")
+    category = row.get("category")
+    name_text = str(name) if pd.notna(name) and str(name).strip() else ticker
+    detail_bits = [
+        f"Benchmark asignado: {benchmark}" if pd.notna(benchmark) else "",
+        f"Clase: {asset_class}" if pd.notna(asset_class) else "",
+        f"Mandato: {category}" if pd.notna(category) else "",
+    ]
+    detail_text = " | ".join(bit for bit in detail_bits if bit)
+    st.markdown(
+        f"""
+        <div class="etf-description">
+            <strong>{escape(ticker)} - {escape(name_text)}</strong><br>
+            {escape(detail_text)}. Esta vista resume performance, riesgo relativo, costo, liquidez y concentración del ETF seleccionado.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_ticker_risk_status(ticker: str, red_flags: pd.DataFrame) -> None:
+    """Show a compact risk-status block for one ETF."""
+
+    ticker_flags = red_flags.loc[red_flags["ticker"] == ticker] if not red_flags.empty else red_flags
+    if ticker_flags.empty:
+        st.success("Riesgo preliminar: sin alertas cuantitativas materiales detectadas.")
+        return
+
+    max_penalty = pd.to_numeric(ticker_flags["penalty"], errors="coerce").max()
+    if max_penalty >= 10:
+        st.error("Riesgo preliminar: alto. Revisar alertas antes de avanzar.")
+    elif max_penalty >= 6:
+        st.warning("Riesgo preliminar: medio. Requiere revisión adicional.")
+    else:
+        st.info("Riesgo preliminar: bajo, con observaciones menores.")
+
+    st.dataframe(
+        ticker_flags[["severity", "flag", "rationale"]],
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "severity": st.column_config.TextColumn("Severidad"),
+            "flag": st.column_config.TextColumn("Alerta"),
+            "rationale": st.column_config.TextColumn("Racional"),
+        },
+    )
+
+
+def render_intro(compact: bool = False) -> None:
+    """Render the public-facing framing before the analytics workflow."""
+
+    st.markdown(
+        """
+        <div class="hero-panel">
+            <div class="hero-kicker">
+                Hecho por <a href="https://www.linkedin.com/in/gerardosparedesromero25" target="_blank">Gerardo Paredes Romero</a>
+                | Data Analytics · Python Automation · Investment Analytics
+            </div>
+            <div class="hero-title">ETF Due Diligence Automation Platform</div>
+            <div class="hero-copy">
+                Herramienta en Python y Streamlit que automatiza un screening preliminar de ETFs:
+                selecciona un mandato, compara fondos similares con su benchmark asignado, calcula métricas clave
+                y genera un resumen ejecutivo para priorizar revisión. Proyecto educativo, no recomendación de inversión.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    workflow_cards = [
+        """
+        <div class="workflow-card">
+            <div class="workflow-number">Paso 1</div>
+            <div class="workflow-title">Mandato</div>
+            <div class="workflow-copy">Elige el objetivo del análisis: equity core, growth, dividendos o renta fija.</div>
+        </div>
+        """,
+        """
+        <div class="workflow-card gold">
+            <div class="workflow-number">Paso 2</div>
+            <div class="workflow-title">Benchmark Fit</div>
+            <div class="workflow-copy">Compara retornos diarios vs benchmark para medir tracking, alpha y riesgo relativo.</div>
+        </div>
+        """,
+        """
+        <div class="workflow-card red">
+            <div class="workflow-number">Paso 3</div>
+            <div class="workflow-title">Due Diligence Output</div>
+            <div class="workflow-copy">Resume el ETF líder con frases predefinidas según score, retorno, riesgo y alertas.</div>
+        </div>
+        """,
+    ]
+    if compact:
+        for card in workflow_cards:
+            st.markdown(card, unsafe_allow_html=True)
+    else:
+        c1, c2, c3 = st.columns(3)
+        for column, card in zip([c1, c2, c3], workflow_cards):
+            column.markdown(card, unsafe_allow_html=True)
+
+    with st.expander("Ver metodología resumida del score"):
+        render_score_methodology_summary()
+
+    with st.expander("Ver workflow automatizado"):
         st.markdown(
             """
-            - **Performance:** mide crecimiento histórico mediante CAGR y retornos acumulados.
-            - **Riesgo:** evalúa volatilidad, drawdown, downside risk, VaR y CVaR.
-            - **Benchmark fit:** primero evalúa cada ETF contra el benchmark que corresponde a su mandato. Luego compara los ETFs entre sí dentro del peer group.
-            - **Liquidez y costo:** incorpora AUM, volumen promedio, volumen en dólares y expense ratio.
-            - **Red flags:** penaliza señales que un analyst revisaría antes de recomendar: baja liquidez, AUM bajo, tracking error elevado, drawdown alto, costo alto o metadata faltante.
-            - **Fund Selection Score:** combina los bloques anteriores en un ranking explicable. No es una caja negra ni una recomendación automática.
+            La herramienta automatiza tareas que un analyst haría manualmente:
+
+            1. Definir el mandato de inversión.
+            2. Construir un peer group comparable.
+            3. Asignar benchmark por ETF.
+            4. Calcular métricas de performance, riesgo, benchmark fit, liquidez y costo.
+            5. Detectar red flags cuantitativas.
+            6. Generar un ranking explicable y un memo preliminar.
             """
         )
 
-    with st.expander("Fuente de datos y confiabilidad"):
+    with st.expander("Ver fuente de datos y disclaimer"):
         st.markdown(
             """
-            La app usa `yfinance`, que consulta datos públicos de Yahoo Finance, para precios, volumen y metadata disponible. Para una demo de portafolio es suficiente, pero no reemplaza fuentes institucionales como Bloomberg, FactSet, Morningstar Direct o datos oficiales del emisor.
+            La app combina **dos fuentes públicas** y una capa local de estabilidad:
 
-            En la tabla se incluyen links a **Yahoo Finance** y, cuando está mapeado, a la **página oficial del emisor / factsheet**. En un workflow real, el analyst validaría expense ratio, AUM, benchmark, holdings y metodología directamente contra esa fuente oficial.
+            - **Yahoo Finance vía `yfinance`:** precios históricos, retornos, volumen, AUM y metadata disponible.
+            - **Alpha Vantage ETF Profile:** respaldo para holdings, concentración, expense ratio y campos que Yahoo no siempre entrega.
+            - **Snapshot local:** evita que la demo falle por límites o caídas temporales de APIs públicas.
+
+            También se incluyen links a **Yahoo Finance** y, cuando está mapeado, a la **página oficial del emisor / factsheet**. En un workflow real, el analyst validaría expense ratio, AUM, benchmark, holdings y metodología contra la fuente oficial del emisor.
+
+            **No constituye recomendación de inversión.** Los resultados son educativos y deben complementarse con revisión cualitativa, suitability, impuestos, spreads, holdings, metodología del índice y aprobación del comité correspondiente.
             """
         )
 
@@ -755,7 +1616,19 @@ def render_intro() -> None:
 def render_screening_controls() -> tuple[str, list[str]]:
     """Render the guided ETF screening controls in the main page."""
 
-    st.subheader("Construye el universo de comparación")
+    render_section_heading("Configura una demo rápida")
+    st.markdown(
+        """
+        <div class="analysis-strip">
+            <div class="analysis-strip-title">Selección guiada de universo comparable</div>
+            <div class="analysis-strip-copy">
+                Puedes dejar la selección por defecto y presionar Continuar al análisis. La app usará el mandato
+                para asignar benchmarks y construir el peer group.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     mandate = st.selectbox(
         "1. Selecciona el mandato de inversión",
         options=list(MANDATE_PRESETS.keys()),
@@ -805,7 +1678,7 @@ def render_screening_controls() -> tuple[str, list[str]]:
             "Mandato": preset["category"],
         }
     )
-    st.dataframe(benchmark_preview, hide_index=True, use_container_width=True)
+    st.dataframe(benchmark_preview, hide_index=True, width="stretch")
 
     return mandate, selected_tickers
 
@@ -821,7 +1694,7 @@ def setup_step(risk_free_rate: float, start_date: str) -> None:
         continue_clicked = st.button(
             "Continuar al análisis",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
     with c2:
         st.caption(
@@ -844,15 +1717,178 @@ def render_analysis_header(config: dict[str, object]) -> None:
 
     left, right = st.columns([0.72, 0.28])
     with left:
-        st.subheader("Análisis generado")
-        st.caption(
-            f"Mandato: {config['mandate_label']} | Benchmark: asignado por ETF | "
-            f"ETFs: {', '.join(config['selected_tickers'])}"
+        st.markdown(
+            f"""
+            <div class="analysis-strip">
+                <div class="analysis-strip-title">Análisis generado</div>
+                <div class="analysis-strip-copy">
+                    Mandato: {escape(str(config['mandate_label']))} | Benchmark: asignado por ETF | ETFs:
+                    {escape(", ".join(config['selected_tickers']))}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with right:
-        if st.button("Retroceder y ajustar selección", use_container_width=True):
+        if st.button("Retroceder y ajustar selección", width="stretch"):
             st.session_state["analysis_ready"] = False
             st.rerun()
+
+
+def _score_text(value: object) -> str:
+    """Format a score value for compact executive UI."""
+
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "n/a"
+    return f"{numeric:.1f}"
+
+
+def build_leader_takeaway(row: pd.Series, leader_red_flags: int) -> str:
+    """Build a one-sentence, recruiter-friendly decision takeaway."""
+
+    ticker = str(row.get("ticker", "")).upper()
+    recommendation = str(row.get("recommendation", ""))
+    cagr = _format_pct(row.get("cagr"))
+    max_drawdown = _format_pct(row.get("max_drawdown"))
+    ter = _format_pct_points(row.get("expense_ratio_pct"))
+    alpha = _format_pct(row.get("alpha"))
+    alert_text = (
+        "sin alertas cuantitativas materiales"
+        if leader_red_flags == 0
+        else f"con {leader_red_flags} alerta(s) para revisar"
+    )
+    return (
+        f"{ticker} queda como {recommendation.lower()} por score relativo, "
+        f"CAGR {cagr}, alpha {alpha}, max drawdown {max_drawdown}, TER {ter} y {alert_text}."
+    )
+
+
+def render_result_headline(
+    config: dict[str, object],
+    top: pd.Series,
+    scope_count: int,
+    leader_red_flags: int,
+) -> None:
+    """Render the first thing a recruiter or analyst should understand."""
+
+    ticker = str(top.get("ticker", "")).upper()
+    recommendation = str(top.get("recommendation", "n/a"))
+    score = _score_text(top.get("fund_selection_score"))
+    takeaway = build_leader_takeaway(top, leader_red_flags)
+    st.markdown(
+        f"""
+        <div class="result-panel">
+            <div class="result-title">Resultado ejecutivo del screening</div>
+            <div class="result-copy">
+                Mandato: <strong>{escape(str(config["mandate_label"]))}</strong>.
+                La app compara un peer group de {scope_count} ETFs, asigna benchmark por ETF,
+                calcula métricas clave y prioriza el fondo que merece revisión.
+            </div>
+            <div class="quick-read-grid">
+                <div class="quick-read-card">
+                    <div class="quick-read-label">ETF líder</div>
+                    <div class="quick-read-value">{escape(ticker)}</div>
+                </div>
+                <div class="quick-read-card">
+                    <div class="quick-read-label">Score</div>
+                    <div class="quick-read-value">{escape(score)} / 100</div>
+                </div>
+                <div class="quick-read-card">
+                    <div class="quick-read-label">Lectura</div>
+                    <div class="quick-read-value">{escape(recommendation)}</div>
+                </div>
+            </div>
+            <div class="result-copy"><strong>30-second read:</strong> {escape(takeaway)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_analysis_rail(
+    config: dict[str, object],
+    top: pd.Series,
+    leader_red_flags: int,
+    scope_tickers: list[str],
+) -> str:
+    """Render the persistent left rail for setup context and analyst controls."""
+
+    ticker = str(top.get("ticker", "")).upper()
+    score = _score_text(top.get("fund_selection_score"))
+    recommendation = str(top.get("recommendation", "n/a"))
+    selected = ", ".join(scope_tickers)
+    st.markdown(
+        f"""
+        <div class="rail-panel">
+            <div class="rail-kicker">ETF Due Diligence Automation</div>
+            <div class="rail-title">Vista de decisión</div>
+            <div class="rail-copy">
+                Flujo automatizado para convertir una lista de ETFs en ranking,
+                alertas y memo preliminar. No es recomendación de inversión.
+            </div>
+            <div class="rail-divider"></div>
+            <div class="rail-copy">
+                <strong>Mandato:</strong> {escape(str(config["mandate_label"]))}<br>
+                <strong>ETFs:</strong> {escape(selected)}
+            </div>
+            <div class="rail-metric-grid">
+                <div class="rail-metric">
+                    <div class="rail-label">Líder</div>
+                    <div class="rail-value">{escape(ticker)}</div>
+                </div>
+                <div class="rail-metric">
+                    <div class="rail-label">Score</div>
+                    <div class="rail-value">{escape(score)}</div>
+                </div>
+                <div class="rail-metric">
+                    <div class="rail-label">Status</div>
+                    <div class="rail-value">{escape(recommendation)}</div>
+                </div>
+                <div class="rail-metric">
+                    <div class="rail-label">Alertas</div>
+                    <div class="rail-value">{leader_red_flags}</div>
+                </div>
+            </div>
+            <div class="rail-note">
+                Primero mira el ETF líder y sus alertas. Luego revisa benchmark fit,
+                drawdown, concentración y fuentes oficiales.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    memo_ticker = st.selectbox(
+        "ETF para análisis/memo",
+        options=scope_tickers,
+        index=0,
+        key="rail_focus_ticker",
+    )
+    if st.button("Retroceder y ajustar selección", width="stretch", key="rail_adjust_selection"):
+        st.session_state["analysis_ready"] = False
+        st.rerun()
+
+    with st.expander("Metodología corta"):
+        st.markdown(
+            """
+            - **Performance:** CAGR y retorno ajustado por riesgo.
+            - **Riesgo:** Sortino, volatilidad, drawdown y CVaR.
+            - **Benchmark fit:** alpha, tracking error, R² e information ratio.
+            - **Calidad operativa:** liquidez, AUM, TER y red flags.
+            """
+        )
+
+    with st.expander("Fuentes y límites"):
+        st.markdown(
+            """
+            Usa snapshot local, Yahoo Finance vía `yfinance` y Alpha Vantage como respaldo
+            para holdings o metadata faltante. En un flujo institucional, el analyst valida
+            holdings, TER, benchmark y metodología contra el factsheet del emisor.
+            """
+        )
+
+    return memo_ticker
 
 
 def main() -> None:
@@ -864,8 +1900,6 @@ def main() -> None:
     apply_theme()
     st.session_state.setdefault("analysis_ready", False)
     st.session_state.setdefault("analysis_config", None)
-    render_intro()
-
     with st.sidebar:
         st.header("Parámetros")
         risk_free_rate = st.number_input(
@@ -880,7 +1914,11 @@ def main() -> None:
         start_date = st.text_input("Fecha inicial", value="2021-01-01")
 
     if not st.session_state["analysis_ready"]:
-        setup_step(risk_free_rate=risk_free_rate, start_date=start_date)
+        intro_col, setup_col = st.columns([0.42, 0.58], gap="large")
+        with intro_col:
+            render_intro(compact=True)
+        with setup_col:
+            setup_step(risk_free_rate=risk_free_rate, start_date=start_date)
         return
 
     config = st.session_state["analysis_config"]
@@ -890,7 +1928,6 @@ def main() -> None:
         st.rerun()
 
     selected_tickers = config["selected_tickers"]
-    render_analysis_header(config)
     try:
         with st.spinner("Descargando datos y ejecutando due diligence..."):
             bundle = load_custom_dashboard_data(
@@ -905,6 +1942,14 @@ def main() -> None:
 
     analysis = bundle.analysis.copy()
     analysis = enrich_with_source_links(analysis)
+    dashboard_optional_columns = [
+        "valuation_pe",
+        "return_on_equity",
+        "top_10_concentration",
+        "top_10_holdings",
+        "alpha",
+    ]
+    analysis = ensure_dashboard_columns(analysis, dashboard_optional_columns)
     red_flags = bundle.red_flags.copy()
     cumulative = bundle.cumulative_returns.copy()
     drawdowns = bundle.drawdowns.copy()
@@ -917,67 +1962,123 @@ def main() -> None:
     scope_tickers = analysis_scope["ticker"].tolist()
     red_flags = red_flags.loc[red_flags["ticker"].isin(scope_tickers)].copy()
     benchmark_map = dict(zip(analysis["ticker"], analysis["benchmark_ticker"]))
-
-    with st.sidebar:
-        memo_ticker = st.selectbox(
-            "ETF para memo",
-            options=scope_tickers,
-            index=0,
-        )
-
     filtered = analysis_scope.loc[analysis_scope["fund_selection_score"] >= min_score].copy()
 
     top = analysis_scope.iloc[0]
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("ETF líder", top["ticker"])
-    col2.metric("Recomendación", top["recommendation"])
-    col3.metric("Score líder", f"{top['fund_selection_score']:.1f}")
-    col4.metric("ETFs revisados", f"{len(analysis_scope)}")
+    leader_red_flags = int(top.get("red_flag_count", 0))
 
-    tab_overview, tab_detail, tab_memo = st.tabs(
-        ["Resumen Ejecutivo", "Análisis por ETF", "Memo de Due Diligence"]
-    )
+    rail_col, output_col = st.columns([0.30, 0.70], gap="large")
+    with rail_col:
+        memo_ticker = render_analysis_rail(config, top, leader_red_flags, scope_tickers)
 
-    with tab_overview:
-        left, right = st.columns([1.05, 1.35])
-        with left:
-            st.subheader("Ranking de Selección")
-            st.plotly_chart(score_bar_chart(filtered), use_container_width=True)
+    with output_col:
+        render_result_headline(config, top, len(analysis_scope), leader_red_flags)
+        render_score_audit(top)
 
-        with right:
-            st.subheader("Comparación de Performance")
-            st.plotly_chart(
-                cumulative_chart(cumulative, selected_tickers, benchmark_map),
-                use_container_width=True,
-            )
+        tab_overview, tab_detail, tab_memo = st.tabs(
+            ["Resumen Ejecutivo", "Análisis por ETF", "Memo de Due Diligence"]
+        )
 
-        with st.expander("Ver metodología del score", expanded=True):
-            render_score_explanation()
+        with tab_overview:
+            left, right = st.columns([0.95, 1.25])
+            with left:
+                render_section_heading("Ranking de Selección")
+                st.plotly_chart(score_bar_chart(filtered), width="stretch")
 
-        ranking_columns = [
-            "ticker",
-            "name",
-            "asset_class",
-            "benchmark_ticker",
-            "recommendation",
-            "fund_selection_score",
-            "cagr",
-            "volatility",
-            "sharpe_ratio",
-            "max_drawdown",
-            "tracking_error",
-            "expense_ratio_pct",
-            "total_assets",
-            "red_flag_count",
-            "yahoo_finance_url",
-            "issuer_url",
-        ]
-        st.subheader("Tabla Ejecutiva de Ranking")
-        st.dataframe(
-            filtered[ranking_columns],
-            hide_index=True,
-            use_container_width=True,
-            column_config={
+            with right:
+                render_section_heading("Comparación de Performance")
+                comparison_columns = resolve_comparison_columns(
+                    selected_tickers,
+                    benchmark_map,
+                    cumulative.columns,
+                )
+                comparison_base = cumulative[comparison_columns].dropna(how="all")
+
+                if comparison_base.empty:
+                    st.warning("No hay datos suficientes para graficar la comparación.")
+                else:
+                    min_chart_date = pd.Timestamp(comparison_base.index.min())
+                    max_chart_date = pd.Timestamp(comparison_base.index.max())
+                    period_preset = st.selectbox(
+                        "Periodo del gráfico",
+                        options=[
+                            "Todo el periodo",
+                            "YTD",
+                            "Último año",
+                            "Últimos 3 años",
+                            "Rango personalizado",
+                        ],
+                        index=0,
+                    )
+
+                    if period_preset == "Rango personalizado":
+                        selected_range = st.date_input(
+                            "Rango de fechas",
+                            value=(min_chart_date.date(), max_chart_date.date()),
+                            min_value=min_chart_date.date(),
+                            max_value=max_chart_date.date(),
+                        )
+                        if isinstance(selected_range, tuple) and len(selected_range) == 2:
+                            chart_start, chart_end = selected_range
+                        else:
+                            chart_start, chart_end = min_chart_date.date(), max_chart_date.date()
+                    else:
+                        chart_start, chart_end = date_window_from_preset(
+                            period_preset,
+                            min_chart_date,
+                            max_chart_date,
+                        )
+
+                    rebased_cumulative = rebase_cumulative_window(
+                        cumulative,
+                        comparison_columns,
+                        chart_start,
+                        chart_end,
+                    )
+                    st.caption(
+                        "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
+                        "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
+                    )
+                    st.plotly_chart(
+                        cumulative_chart(rebased_cumulative, selected_tickers, benchmark_map),
+                        width="stretch",
+                    )
+
+            ranking_columns = [
+                "ticker",
+                "name",
+                "asset_class",
+                "benchmark_ticker",
+                "recommendation",
+                "fund_selection_score",
+                "cagr",
+                "volatility",
+                "sharpe_ratio",
+                "max_drawdown",
+                "tracking_error",
+                "alpha",
+                "valuation_pe",
+                "top_10_concentration",
+                "expense_ratio_pct",
+                "total_assets",
+                "red_flag_count",
+                "yahoo_finance_url",
+                "issuer_url",
+            ]
+            executive_columns = [
+                "ticker",
+                "name",
+                "recommendation",
+                "fund_selection_score",
+                "cagr",
+                "max_drawdown",
+                "alpha",
+                "valuation_pe",
+                "top_10_concentration",
+                "expense_ratio_pct",
+                "red_flag_count",
+            ]
+            ranking_column_config = {
                 "ticker": st.column_config.TextColumn("Ticker"),
                 "name": st.column_config.TextColumn("Nombre"),
                 "asset_class": st.column_config.TextColumn("Clase de activo"),
@@ -989,7 +2090,10 @@ def main() -> None:
                 "sharpe_ratio": st.column_config.NumberColumn("Sharpe", format="%.2f"),
                 "max_drawdown": st.column_config.NumberColumn("Max DD", format="%.1%"),
                 "tracking_error": st.column_config.NumberColumn("Tracking Error", format="%.1%"),
-                "expense_ratio_pct": st.column_config.NumberColumn("Expense Ratio", format="%.2f%%"),
+                "alpha": st.column_config.NumberColumn("Alpha", format="%.1%"),
+                "valuation_pe": st.column_config.NumberColumn("P/E", format="%.1fx"),
+                "top_10_concentration": st.column_config.NumberColumn("Top 10", format="%.1%"),
+                "expense_ratio_pct": st.column_config.NumberColumn("TER", format="%.2f%%"),
                 "total_assets": st.column_config.NumberColumn("AUM", format="$%.0f"),
                 "red_flag_count": st.column_config.NumberColumn("Alertas", format="%d"),
                 "yahoo_finance_url": st.column_config.LinkColumn(
@@ -1000,67 +2104,149 @@ def main() -> None:
                     "Emisor / factsheet",
                     display_text="Ver fuente",
                 ),
-            },
-        )
-
-        st.subheader("Alertas")
-        if red_flags.empty:
-            st.success("No se detectaron alertas.")
-        else:
+            }
+            render_section_heading("Tabla Ejecutiva de Ranking")
             st.dataframe(
-                red_flags,
+                filtered[executive_columns],
                 hide_index=True,
-                use_container_width=True,
-                column_config={
-                    "ticker": st.column_config.TextColumn("Ticker"),
-                    "severity": st.column_config.TextColumn("Severidad"),
-                    "flag": st.column_config.TextColumn("Alerta"),
-                    "rationale": st.column_config.TextColumn("Racional"),
-                    "penalty": st.column_config.NumberColumn("Penalización", format="%.1f"),
-                },
+                width="stretch",
+                column_config=ranking_column_config,
             )
 
-    with tab_detail:
-        selected_detail = st.selectbox(
-            "ETF a analizar",
-            options=scope_tickers,
-            index=scope_tickers.index(memo_ticker),
-        )
-        detail_row = analysis.loc[analysis["ticker"] == selected_detail].iloc[0]
+            with st.expander("Ver tabla completa con benchmark, liquidez y fuentes"):
+                st.dataframe(
+                    filtered[ranking_columns],
+                    hide_index=True,
+                    width="stretch",
+                    column_config=ranking_column_config,
+                )
 
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Score", f"{detail_row['fund_selection_score']:.1f}")
-        c2.metric("CAGR", _format_pct(detail_row.get("cagr")))
-        c3.metric("Sharpe", f"{pd.to_numeric(detail_row.get('sharpe_ratio'), errors='coerce'):.2f}")
-        c4.metric("Costo", _format_pct_points(detail_row.get("expense_ratio_pct")))
-        c5.metric("AUM", _format_money(detail_row.get("total_assets")))
+            render_section_heading("Alertas")
+            if red_flags.empty:
+                st.success("No se detectaron alertas.")
+            else:
+                st.dataframe(
+                    red_flags,
+                    hide_index=True,
+                    width="stretch",
+                    column_config={
+                        "ticker": st.column_config.TextColumn("Ticker"),
+                        "severity": st.column_config.TextColumn("Severidad"),
+                        "flag": st.column_config.TextColumn("Alerta"),
+                        "rationale": st.column_config.TextColumn("Racional"),
+                        "penalty": st.column_config.NumberColumn("Penalización", format="%.1f"),
+                    },
+                )
 
-        source_cols = st.columns(2)
-        with source_cols[0]:
-            render_external_link("Abrir Yahoo Finance", detail_row["yahoo_finance_url"])
-        with source_cols[1]:
-            render_external_link(
-                "Abrir página del emisor / factsheet",
-                detail_row["issuer_url"],
+        with tab_detail:
+            selected_detail = st.selectbox(
+                "ETF a analizar",
+                options=scope_tickers,
+                index=scope_tickers.index(memo_ticker) if memo_ticker in scope_tickers else 0,
             )
+            detail_row = analysis.loc[analysis["ticker"] == selected_detail].iloc[0]
+            render_etf_description(detail_row)
 
-        chart_left, chart_right = st.columns([1.35, 1])
-        with chart_left:
-            st.subheader("ETF vs Benchmark")
-            st.plotly_chart(
-                cumulative_chart(cumulative, [selected_detail], benchmark_map),
-                use_container_width=True,
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                render_kpi_card("Score", f"{detail_row['fund_selection_score']:.1f}", "Ranking relativo", "teal")
+            with c2:
+                render_kpi_card("CAGR", _format_pct(detail_row.get("cagr")), "Retorno anualizado", "slate")
+            with c3:
+                render_kpi_card(
+                    "Sharpe",
+                    f"{pd.to_numeric(detail_row.get('sharpe_ratio'), errors='coerce'):.2f}",
+                    "Retorno/riesgo",
+                    "gold",
+                )
+            c4, c5 = st.columns(2)
+            with c4:
+                render_kpi_card("Costo", _format_pct_points(detail_row.get("expense_ratio_pct")), "TER anual", "teal")
+            with c5:
+                render_kpi_card("AUM", _format_money(detail_row.get("total_assets")), "Escala del fondo", "slate")
+
+            st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
+            source_cols = st.columns(2)
+            with source_cols[0]:
+                render_external_link("Abrir Yahoo Finance", detail_row["yahoo_finance_url"])
+            with source_cols[1]:
+                render_external_link(
+                    "Abrir página del emisor / factsheet",
+                    detail_row["issuer_url"],
+                )
+
+            render_section_heading("ETF vs Benchmark")
+            detail_columns = resolve_comparison_columns(
+                [selected_detail],
+                benchmark_map,
+                cumulative.columns,
             )
-        with chart_right:
-            st.subheader("Resumen de Métricas")
-            st.dataframe(metric_table(detail_row), hide_index=True, use_container_width=True)
+            detail_base = cumulative[detail_columns].dropna(how="all")
+            if detail_base.empty:
+                st.warning("No hay datos suficientes para graficar el ETF contra su benchmark.")
+            else:
+                detail_min_date = pd.Timestamp(detail_base.index.min()).date()
+                detail_max_date = pd.Timestamp(detail_base.index.max()).date()
+                detail_start, detail_end = st.slider(
+                    "Rango de fechas del gráfico",
+                    min_value=detail_min_date,
+                    max_value=detail_max_date,
+                    value=(detail_min_date, detail_max_date),
+                    format="YYYY-MM-DD",
+                    key=f"detail_date_range_{selected_detail}",
+                )
+                detail_cumulative = rebase_cumulative_window(
+                    cumulative,
+                    detail_columns,
+                    detail_start,
+                    detail_end,
+                )
+                st.plotly_chart(
+                    cumulative_chart(detail_cumulative, [selected_detail], benchmark_map),
+                    width="stretch",
+                )
+                st.caption(
+                    "El gráfico muestra retorno acumulado rebajado a 0% en la fecha inicial seleccionada. "
+                    "La línea punteada corresponde al benchmark asignado."
+                )
 
-        st.subheader("Drawdown")
-        st.plotly_chart(drawdown_chart(drawdowns, selected_detail), use_container_width=True)
+            render_section_heading("Resumen de Métricas")
+            st.dataframe(metric_table(detail_row), hide_index=True, width="stretch")
 
-    with tab_memo:
-        st.subheader(f"Memo preliminar: {memo_ticker}")
-        st.markdown(bundle.memos[memo_ticker])
+            render_section_heading("Riesgos Detectados")
+            render_ticker_risk_status(selected_detail, red_flags)
+
+            risk_left, risk_right = st.columns([1.05, 0.95])
+            with risk_left:
+                render_section_heading("Drawdown")
+                st.plotly_chart(drawdown_chart(drawdowns, selected_detail), width="stretch")
+                st.caption(
+                    "El drawdown mide la caída desde el último máximo histórico. "
+                    "Ayuda a dimensionar pérdida potencial y tiempo de recuperación."
+                )
+            with risk_right:
+                render_section_heading("Concentración Top 10")
+                holdings_table = load_top_holdings_table(
+                    selected_detail,
+                    detail_row.get("top_10_holdings"),
+                )
+                st.plotly_chart(
+                    top_10_concentration_chart(detail_row, holdings_table),
+                    width="stretch",
+                )
+                if holdings_table.empty:
+                    st.info(
+                        "La fuente pública no entregó el desglose de holdings para este ETF."
+                    )
+                else:
+                    st.caption(
+                        "La dona separa los 5 mayores holdings, el resto del Top 10 y el resto del ETF. "
+                        "A mayor concentración, mayor sensibilidad a shocks específicos de esos emisores."
+                    )
+
+        with tab_memo:
+            render_section_heading(f"Memo preliminar: {memo_ticker}")
+            st.markdown(bundle.memos.get(memo_ticker, "Memo no disponible para este ETF."))
 
 
 if __name__ == "__main__":
