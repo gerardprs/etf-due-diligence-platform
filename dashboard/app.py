@@ -855,6 +855,80 @@ def apply_theme() -> None:
             font-size: 0.86rem;
             line-height: 1.38;
         }
+        .memo-decision-panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            margin: 0.35rem 0 0.95rem 0;
+            box-shadow: var(--shadow);
+        }
+        .memo-decision-kicker {
+            color: var(--teal);
+            font-size: 0.74rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .memo-decision-title {
+            color: var(--ink);
+            font-size: 1.18rem;
+            font-weight: 780;
+            line-height: 1.25;
+            margin-top: 0.25rem;
+        }
+        .memo-decision-copy {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.42;
+            margin-top: 0.42rem;
+        }
+        .memo-decision-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-top: 0.85rem;
+        }
+        .memo-decision-stat {
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.68rem 0.72rem;
+            min-height: 78px;
+        }
+        .memo-decision-label {
+            color: var(--muted);
+            font-size: 0.7rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .memo-decision-value {
+            color: var(--ink);
+            font-size: 0.98rem;
+            font-weight: 780;
+            line-height: 1.25;
+            margin-top: 0.22rem;
+        }
+        .memo-question-list {
+            background: #fbfcfd;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin: 0.2rem 0 1rem 0;
+        }
+        .memo-question-title {
+            color: var(--ink);
+            font-size: 0.96rem;
+            font-weight: 780;
+            margin-bottom: 0.4rem;
+        }
+        .memo-question-list ul {
+            margin: 0.2rem 0 0 1.05rem;
+            padding: 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.38;
+        }
         @media (max-width: 900px) {
             div[data-testid="column"]:has(.rail-panel) {
                 position: static;
@@ -866,6 +940,7 @@ def apply_theme() -> None:
             }
             .quick-read-grid,
             .ic-brief-grid,
+            .memo-decision-grid,
             .rail-metric-grid {
                 grid-template-columns: 1fr;
             }
@@ -1452,6 +1527,65 @@ def render_pm_checklist(row: pd.Series) -> None:
                 <li>¿El TER, AUM y volumen justifican usar este vehículo frente a peers más baratos o líquidos?</li>
                 <li>¿La concentración Top 10 y el overlap con cartera existente crean exposición duplicada?</li>
                 <li>¿Hay consideraciones de impuestos, UCITS/offshore, spreads o securities lending que cambien la implementación?</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_memo_decision_summary(row: pd.Series) -> None:
+    """Render the memo's investment decision before the full text."""
+
+    ticker = str(row.get("ticker", "")).upper()
+    score = _score_text(row.get("fund_selection_score"))
+    recommendation = str(row.get("recommendation", "n/a"))
+    committee_status = str(row.get("committee_status", "RevisiÃ³n manual requerida"))
+    benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
+    alpha = _format_pct(row.get("alpha"))
+    drawdown = _format_pct(row.get("max_drawdown"))
+    ter = _format_pct_points(row.get("expense_ratio_pct"))
+    top_10 = _format_pct(row.get("top_10_concentration"))
+    mandate_label, mandate_note = mandate_fit_label(row)
+    implementation, implementation_note = implementation_label(row)
+    concentration, concentration_note = concentration_label(row)
+
+    st.markdown(
+        f"""
+        <div class="memo-decision-panel">
+            <div class="memo-decision-kicker">Lectura de Investment Committee</div>
+            <div class="memo-decision-title">{escape(ticker)}: {escape(committee_status)}</div>
+            <div class="memo-decision-copy">
+                El memo no genera una recomendacion de compra; prioriza si el ETF merece due diligence
+                adicional. Se compara contra {escape(benchmark)}, revisando retorno ajustado por riesgo,
+                benchmark fit, costo, liquidez, concentracion y red flags.
+            </div>
+            <div class="memo-decision-grid">
+                <div class="memo-decision-stat">
+                    <div class="memo-decision-label">Score</div>
+                    <div class="memo-decision-value">{escape(score)} / 100</div>
+                </div>
+                <div class="memo-decision-stat">
+                    <div class="memo-decision-label">Lectura</div>
+                    <div class="memo-decision-value">{escape(recommendation)}</div>
+                </div>
+                <div class="memo-decision-stat">
+                    <div class="memo-decision-label">Alpha / DD</div>
+                    <div class="memo-decision-value">{escape(alpha)} / {escape(drawdown)}</div>
+                </div>
+                <div class="memo-decision-stat">
+                    <div class="memo-decision-label">TER / Top 10</div>
+                    <div class="memo-decision-value">{escape(ter)} / {escape(top_10)}</div>
+                </div>
+            </div>
+        </div>
+        <div class="memo-question-list">
+            <div class="memo-question-title">Preguntas que un PM validaria antes de aprobar</div>
+            <ul>
+                <li><strong>Mandato:</strong> {escape(mandate_label)}. {escape(mandate_note)}</li>
+                <li><strong>ImplementaciÃ³n:</strong> {escape(implementation)}. {escape(implementation_note)}</li>
+                <li><strong>ConcentraciÃ³n:</strong> {escape(concentration)}. {escape(concentration_note)}</li>
+                <li><strong>Fuente oficial:</strong> confirmar TER, holdings, indice, spread y tratamiento tributario contra factsheet.</li>
             </ul>
         </div>
         """,
@@ -2489,11 +2623,14 @@ def main() -> None:
 
         with tab_memo:
             render_section_heading(f"Memo preliminar: {memo_ticker}")
+            memo_row = analysis.loc[analysis["ticker"] == memo_ticker].iloc[0]
+            render_memo_decision_summary(memo_row)
             try:
                 memo_text = generate_due_diligence_memo(memo_ticker, analysis, red_flags)
             except Exception:
                 memo_text = bundle.memos.get(memo_ticker, "Memo no disponible para este ETF.")
-            st.markdown(memo_text)
+            with st.expander("Ver memo completo generado por reglas", expanded=True):
+                st.markdown(memo_text)
 
 
 if __name__ == "__main__":
