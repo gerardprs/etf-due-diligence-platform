@@ -30,6 +30,7 @@ from fund_selection.pipeline import (  # noqa: E402
     build_selection_analysis,
     build_selection_analysis_from_processed,
 )
+from fund_selection.scoring import committee_status_from_row  # noqa: E402
 
 
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -1244,6 +1245,21 @@ def ensure_dashboard_columns(frame: pd.DataFrame, columns: list[str]) -> pd.Data
     return output
 
 
+def ensure_committee_status(frame: pd.DataFrame) -> pd.DataFrame:
+    """Backfill committee status when Streamlit serves an older cached analysis."""
+
+    output = frame.copy()
+    if "committee_status" not in output.columns:
+        output["committee_status"] = pd.NA
+    missing = output["committee_status"].isna() | (output["committee_status"].astype(str).str.strip() == "")
+    if missing.any():
+        output.loc[missing, "committee_status"] = output.loc[missing].apply(
+            committee_status_from_row,
+            axis=1,
+        )
+    return output
+
+
 def scroll_to_top_once(flag_name: str) -> None:
     """Reset scroll position once after a major workflow transition."""
 
@@ -2152,6 +2168,7 @@ def main() -> None:
         "committee_status",
     ]
     analysis = ensure_dashboard_columns(analysis, dashboard_optional_columns)
+    analysis = ensure_committee_status(analysis)
     red_flags = bundle.red_flags.copy()
     cumulative = bundle.cumulative_returns.copy()
     drawdowns = bundle.drawdowns.copy()
