@@ -30,7 +30,6 @@ from fund_selection.pipeline import (  # noqa: E402
     build_selection_analysis,
     build_selection_analysis_from_processed,
 )
-from fund_selection.scoring import committee_status_from_row  # noqa: E402
 
 
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -1254,10 +1253,30 @@ def ensure_committee_status(frame: pd.DataFrame) -> pd.DataFrame:
     missing = output["committee_status"].isna() | (output["committee_status"].astype(str).str.strip() == "")
     if missing.any():
         output.loc[missing, "committee_status"] = output.loc[missing].apply(
-            committee_status_from_row,
+            local_committee_status_from_row,
             axis=1,
         )
     return output
+
+
+def local_committee_status_from_row(row: pd.Series) -> str:
+    """Local fallback for investment committee status in deployed dashboards."""
+
+    score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
+    red_flag_count = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
+    penalty = pd.to_numeric(row.get("red_flag_penalty"), errors="coerce")
+    red_flag_count = 0 if pd.isna(red_flag_count) else int(red_flag_count)
+    penalty = 0.0 if pd.isna(penalty) else float(penalty)
+
+    if pd.isna(score):
+        return "Revisión manual requerida"
+    if score >= 80 and red_flag_count == 0:
+        return "Avanza a shortlist"
+    if score >= 70 and penalty <= 6:
+        return "Apto con validación cualitativa"
+    if score >= 50:
+        return "Watchlist / revisar supuestos"
+    return "Descartar salvo razón cualitativa"
 
 
 def scroll_to_top_once(flag_name: str) -> None:
