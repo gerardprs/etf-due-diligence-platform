@@ -78,6 +78,38 @@ def _risks(row: pd.Series, ticker_flags: pd.DataFrame) -> list[str]:
     return risks or ["No se detecta una alerta cuantitativa material en este filtro preliminar."]
 
 
+def _decision_view(row: pd.Series) -> str:
+    """Build an investment-office decision sentence."""
+
+    ticker = row.get("ticker")
+    committee_status = row.get("committee_status", "Revisión manual requerida")
+    recommendation = row.get("recommendation", "n/a")
+    score = _number(row.get("fund_selection_score"), 1)
+    return (
+        f"{ticker} queda en estado **{committee_status}** con recomendación cuantitativa "
+        f"**{recommendation}** y score de **{score}/100**. El resultado debe interpretarse "
+        "como priorización de due diligence, no como orden de compra."
+    )
+
+
+def _committee_questions(row: pd.Series) -> list[str]:
+    """Generate PM-style questions that remain after quantitative screening."""
+
+    ticker = str(row.get("ticker", "")).upper()
+    benchmark = row.get("benchmark_ticker", "benchmark asignado")
+    questions = [
+        f"Confirmar que la metodología de {ticker} replica correctamente la exposición buscada frente a {benchmark}.",
+        "Validar TER, AUM, volumen, bid-ask spread y riesgo de cierre contra el factsheet oficial del emisor.",
+        "Revisar holdings, concentración Top 10 y overlap con posiciones existentes del portafolio.",
+        "Evaluar tratamiento tributario, versión UCITS/offshore disponible y restricciones de suitability del cliente.",
+    ]
+    if pd.to_numeric(row.get("tracking_error"), errors="coerce") > 0.03:
+        questions.append("Explicar la fuente del tracking error antes de usarlo como exposición core.")
+    if pd.to_numeric(row.get("top_10_concentration"), errors="coerce") > 0.40:
+        questions.append("Preparar lectura de concentración por issuer y sensibilidad a mega caps.")
+    return questions
+
+
 def generate_due_diligence_memo(
     ticker: str,
     scored_analysis: pd.DataFrame,
@@ -95,19 +127,26 @@ def generate_due_diligence_memo(
 
     strengths = "\n".join(f"- {item}" for item in _strengths(row))
     risks = "\n".join(f"- {item}" for item in _risks(row, ticker_flags))
+    questions = "\n".join(f"- {item}" for item in _committee_questions(row))
+    decision_view = _decision_view(row)
 
     memo = f"""# Memo Preliminar de Due Diligence
 
-## Resumen del Fondo
+## 1. Decisión Preliminar
+
+{decision_view}
+
+## 2. Resumen del Fondo
 
 **Ticker:** {row.get("ticker")}
 **Nombre:** {row.get("name", "n/a")}
 **Clase de Activo:** {row.get("asset_class", "n/a")}
 **Benchmark:** {row.get("benchmark_ticker", "n/a")}
 **Recomendación:** {row.get("recommendation", "n/a")}
+**Estado Comité:** {row.get("committee_status", "n/a")}
 **Fund Selection Score:** {_number(row.get("fund_selection_score"), 1)} / 100
 
-## Resumen Cuantitativo
+## 3. Resumen Cuantitativo
 
 | Métrica | Valor |
 |---|---:|
@@ -123,21 +162,25 @@ def generate_due_diligence_memo(
 | AUM | {_money(row.get("total_assets"))} |
 | Volumen Promedio en USD | {_money(row.get("average_dollar_volume"))} |
 
-## Racional de Inversión
+## 4. Racional de Inversión
 
 {row.get("ticker")} está clasificado como exposición de {row.get("asset_class", "n/a")} y se evalúa contra {row.get("benchmark_ticker", "n/a")}. El filtro actual asigna una recomendación de {row.get("recommendation", "n/a")} con base en performance, control de riesgo, ajuste al benchmark, liquidez, eficiencia de costos y penalizaciones por alertas.
 
-## Fortalezas Clave
+## 5. Fortalezas Clave
 
 {strengths}
 
-## Riesgos / Alertas
+## 6. Riesgos / Alertas
 
 {risks}
 
-## Vista Preliminar
+## 7. Preguntas Para Comité / PM
 
-Este memo es una primera revisión cuantitativa. Antes de implementar una recomendación, el analista debe validar metodología del índice, composición, overlap con cartera, consideraciones tributarias, comportamiento de spreads, política de securities lending y restricciones de suitability del cliente.
+{questions}
+
+## 8. Vista Preliminar
+
+Este memo automatiza la primera lectura que normalmente se haría en Excel: ranking relativo, benchmark fit, riesgo de pérdida, liquidez, costo, concentración y alertas. Antes de implementar una recomendación, el analista debe validar metodología del índice, composición, overlap con cartera, consideraciones tributarias, comportamiento de spreads, política de securities lending y restricciones de suitability del cliente.
 """
 
     return memo

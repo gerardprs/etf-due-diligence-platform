@@ -101,6 +101,31 @@ def recommendation_from_score(score: float) -> str:
     return "No prioritario"
 
 
+def committee_status_from_row(row: pd.Series) -> str:
+    """Translate score and flags into an investment committee workflow status.
+
+    The Fund Selection Score is useful for ranking, but an analyst still needs
+    a decision-language output: which funds move forward, which stay in the
+    watchlist, and which require deeper qualitative work before a PM sees them.
+    """
+
+    score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
+    red_flag_count = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
+    penalty = pd.to_numeric(row.get("red_flag_penalty"), errors="coerce")
+    red_flag_count = 0 if pd.isna(red_flag_count) else int(red_flag_count)
+    penalty = 0.0 if pd.isna(penalty) else float(penalty)
+
+    if pd.isna(score):
+        return "Revisión manual requerida"
+    if score >= 80 and red_flag_count == 0:
+        return "Avanza a shortlist"
+    if score >= 70 and penalty <= 6:
+        return "Apto con validación cualitativa"
+    if score >= 50:
+        return "Watchlist / revisar supuestos"
+    return "Descartar salvo razón cualitativa"
+
+
 def score_funds(
     analysis: pd.DataFrame,
     red_flags: pd.DataFrame,
@@ -136,6 +161,7 @@ def score_funds(
     weighted_score = sum(scored[column] * weight for column, weight in score_weights.items())
     scored["fund_selection_score"] = (weighted_score - scored["red_flag_penalty"]).clip(0.0, 100.0)
     scored["recommendation"] = scored["fund_selection_score"].map(recommendation_from_score)
+    scored["committee_status"] = scored.apply(committee_status_from_row, axis=1)
 
     columns_first = [
         "ticker",
@@ -143,6 +169,7 @@ def score_funds(
         "asset_class",
         "benchmark_ticker",
         "recommendation",
+        "committee_status",
         "fund_selection_score",
         "performance_score",
         "risk_score",

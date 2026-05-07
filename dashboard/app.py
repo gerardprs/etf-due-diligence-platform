@@ -800,6 +800,60 @@ def apply_theme() -> None:
             font-weight: 760;
             margin-top: 0.2rem;
         }
+        .ic-brief-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-top: 0.8rem;
+        }
+        .ic-brief-card {
+            background: #fbfcfd;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.72rem 0.78rem;
+            min-height: 92px;
+        }
+        .ic-brief-label {
+            color: var(--muted);
+            font-size: 0.7rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .ic-brief-value {
+            color: var(--ink);
+            font-size: 0.92rem;
+            font-weight: 740;
+            line-height: 1.25;
+            margin-top: 0.22rem;
+        }
+        .ic-brief-note {
+            color: var(--muted);
+            font-size: 0.76rem;
+            line-height: 1.3;
+            margin-top: 0.3rem;
+        }
+        .pm-checklist {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--navy);
+            border-radius: 8px;
+            padding: 0.9rem 1rem;
+            margin: 0.65rem 0 1rem 0;
+            box-shadow: 0 6px 18px rgba(24, 49, 63, 0.04);
+        }
+        .pm-checklist-title {
+            color: var(--ink);
+            font-size: 0.98rem;
+            font-weight: 780;
+            margin-bottom: 0.4rem;
+        }
+        .pm-checklist ul {
+            margin: 0.2rem 0 0 1.05rem;
+            padding: 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.38;
+        }
         @media (max-width: 900px) {
             div[data-testid="column"]:has(.rail-panel) {
                 position: static;
@@ -810,6 +864,7 @@ def apply_theme() -> None:
                 gap: 0.7rem;
             }
             .quick-read-grid,
+            .ic-brief-grid,
             .rail-metric-grid {
                 grid-template-columns: 1fr;
             }
@@ -1160,6 +1215,7 @@ def metric_table(row: pd.Series) -> pd.DataFrame:
             ("TER", _format_pct_points(row.get("expense_ratio_pct")), "Total Expense Ratio anual del ETF según metadata disponible."),
             ("AUM", _format_money(row.get("total_assets")), "Activos bajo gestión; proxy de escala y estabilidad."),
             ("Volumen Promedio USD", _format_money(row.get("average_dollar_volume")), "Proxy de liquidez operativa diaria."),
+            ("Estado Comité", str(row.get("committee_status", "n/a")), "Lectura operativa para decidir si avanza, queda en watchlist o requiere revisión manual."),
         ],
         columns=["Métrica", "Valor", "Descripción"],
     )
@@ -1186,6 +1242,28 @@ def ensure_dashboard_columns(frame: pd.DataFrame, columns: list[str]) -> pd.Data
         if column not in output.columns:
             output[column] = pd.NA
     return output
+
+
+def scroll_to_top_once(flag_name: str) -> None:
+    """Reset scroll position once after a major workflow transition."""
+
+    if st.session_state.get(flag_name):
+        return
+    st.html(
+        """
+        <script>
+        const parentWindow = window.parent;
+        const doc = parentWindow.document;
+        const main = doc.querySelector('section.main');
+        if (main) {
+          main.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+        parentWindow.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        </script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+    st.session_state[flag_name] = True
 
 
 def render_section_heading(title: str) -> None:
@@ -1233,6 +1311,116 @@ def recommendation_accent(value: object) -> str:
     if recommendation == "En observación":
         return "gold"
     return "red"
+
+
+def _numeric_value(value: object) -> float:
+    """Convert dashboard values to float while keeping NaN explicit."""
+
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return float("nan")
+    return float(numeric)
+
+
+def mandate_fit_label(row: pd.Series) -> tuple[str, str]:
+    """Summarize whether the ETF behaves like the exposure it is meant to fill."""
+
+    tracking_error = _numeric_value(row.get("tracking_error"))
+    r_squared = _numeric_value(row.get("r_squared"))
+    if pd.notna(tracking_error) and tracking_error <= 0.015 and pd.notna(r_squared) and r_squared >= 0.95:
+        return "Fit alto", "Tracking bajo y alta relación con benchmark."
+    if pd.notna(tracking_error) and tracking_error <= 0.035:
+        return "Fit razonable", "Cumple mandato, pero revisar tracking relativo."
+    return "Revisar fit", "Validar benchmark, estrategia e índice subyacente."
+
+
+def implementation_label(row: pd.Series) -> tuple[str, str]:
+    """Summarize execution quality through scale, liquidity and cost."""
+
+    assets = _numeric_value(row.get("total_assets"))
+    dollar_volume = _numeric_value(row.get("average_dollar_volume"))
+    expense = _numeric_value(row.get("expense_ratio_pct"))
+    liquid = pd.notna(assets) and assets >= 1_000_000_000 and pd.notna(dollar_volume) and dollar_volume >= 10_000_000
+    cheap = pd.notna(expense) and expense <= 0.20
+    if liquid and cheap:
+        return "Implementación eficiente", "Escala, liquidez y TER compatibles con uso institucional."
+    if liquid:
+        return "Implementable", "Buena escala/liquidez; revisar costo vs peer group."
+    return "Revisar ejecución", "Validar AUM, volumen, spreads y riesgo de cierre."
+
+
+def concentration_label(row: pd.Series) -> tuple[str, str]:
+    """Summarize issuer concentration risk for the selected ETF."""
+
+    top_10 = _numeric_value(row.get("top_10_concentration"))
+    if pd.isna(top_10):
+        return "Holdings por validar", "Confirmar Top 10 y metodología en factsheet."
+    if top_10 <= 0.35:
+        return "Concentración controlada", f"Top 10: {_format_pct(top_10)}."
+    if top_10 <= 0.50:
+        return "Concentración relevante", f"Top 10: {_format_pct(top_10)}; revisar nombres dominantes."
+    return "Concentración alta", f"Top 10: {_format_pct(top_10)}; evaluar shocks idiosincráticos."
+
+
+def render_ic_brief(row: pd.Series) -> None:
+    """Render a PM-style decision brief above the detailed analytics."""
+
+    mandate_label, mandate_note = mandate_fit_label(row)
+    implementation, implementation_note = implementation_label(row)
+    concentration, concentration_note = concentration_label(row)
+    committee_status = str(row.get("committee_status", "Revisión manual requerida"))
+    red_flag_value = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
+    red_flags = 0 if pd.isna(red_flag_value) else int(red_flag_value)
+    status_note = "Sin alertas materiales." if red_flags == 0 else f"{red_flags} alerta(s) para validar."
+
+    st.markdown(
+        f"""
+        <div class="ic-brief-grid">
+            <div class="ic-brief-card">
+                <div class="ic-brief-label">Mandato</div>
+                <div class="ic-brief-value">{escape(mandate_label)}</div>
+                <div class="ic-brief-note">{escape(mandate_note)}</div>
+            </div>
+            <div class="ic-brief-card">
+                <div class="ic-brief-label">Implementación</div>
+                <div class="ic-brief-value">{escape(implementation)}</div>
+                <div class="ic-brief-note">{escape(implementation_note)}</div>
+            </div>
+            <div class="ic-brief-card">
+                <div class="ic-brief-label">Concentración</div>
+                <div class="ic-brief-value">{escape(concentration)}</div>
+                <div class="ic-brief-note">{escape(concentration_note)}</div>
+            </div>
+            <div class="ic-brief-card">
+                <div class="ic-brief-label">Comité</div>
+                <div class="ic-brief-value">{escape(committee_status)}</div>
+                <div class="ic-brief-note">{escape(status_note)}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_pm_checklist(row: pd.Series) -> None:
+    """Show the qualitative checks a real analyst would complete after screening."""
+
+    ticker = str(row.get("ticker", "")).upper()
+    benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
+    st.markdown(
+        f"""
+        <div class="pm-checklist">
+            <div class="pm-checklist-title">Preguntas de PM antes de avanzar con {escape(ticker)}</div>
+            <ul>
+                <li>¿El índice y la metodología replican exactamente la exposición buscada frente a {escape(benchmark)}?</li>
+                <li>¿El TER, AUM y volumen justifican usar este vehículo frente a peers más baratos o líquidos?</li>
+                <li>¿La concentración Top 10 y el overlap con cartera existente crean exposición duplicada?</li>
+                <li>¿Hay consideraciones de impuestos, UCITS/offshore, spreads o securities lending que cambien la implementación?</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_external_link(label: str, url: object) -> None:
@@ -1540,9 +1728,9 @@ def render_intro(compact: bool = False) -> None:
             </div>
             <div class="hero-title">ETF Due Diligence Automation Platform</div>
             <div class="hero-copy">
-                Herramienta en Python y Streamlit que automatiza un screening preliminar de ETFs:
-                selecciona un mandato, compara fondos similares con su benchmark asignado, calcula métricas clave
-                y genera un resumen ejecutivo para priorizar revisión. Proyecto educativo, no recomendación de inversión.
+                Herramienta de investment analytics en Python que replica el primer filtro de un fund selector:
+                define mandato, compara peer group, evalúa benchmark fit, riesgo de pérdida, liquidez, costo,
+                concentración y genera un memo preliminar para comité. Proyecto educativo, no recomendación de inversión.
             </div>
         </div>
         """,
@@ -1554,7 +1742,7 @@ def render_intro(compact: bool = False) -> None:
         <div class="workflow-card">
             <div class="workflow-number">Paso 1</div>
             <div class="workflow-title">Mandato</div>
-            <div class="workflow-copy">Elige el objetivo del análisis: equity core, growth, dividendos o renta fija.</div>
+            <div class="workflow-copy">Parte de la pregunta real de cartera: qué exposición necesita cubrir el mandato.</div>
         </div>
         """,
         """
@@ -1568,7 +1756,7 @@ def render_intro(compact: bool = False) -> None:
         <div class="workflow-card red">
             <div class="workflow-number">Paso 3</div>
             <div class="workflow-title">Due Diligence Output</div>
-            <div class="workflow-copy">Resume el ETF líder con frases predefinidas según score, retorno, riesgo y alertas.</div>
+            <div class="workflow-copy">Entrega shortlist, red flags y memo accionable para priorizar revisión del PM.</div>
         </div>
         """,
     ]
@@ -1593,7 +1781,10 @@ def render_intro(compact: bool = False) -> None:
             3. Asignar benchmark por ETF.
             4. Calcular métricas de performance, riesgo, benchmark fit, liquidez y costo.
             5. Detectar red flags cuantitativas.
-            6. Generar un ranking explicable y un memo preliminar.
+            6. Convertir el output en shortlist, estado para comité y memo preliminar.
+
+            **Valor operativo:** reduce un flujo repetitivo de Excel a una revisión reproducible,
+            auditable y consistente entre mandatos.
             """
         )
 
@@ -1709,6 +1900,7 @@ def setup_step(risk_free_rate: float, start_date: str) -> None:
             "selected_tickers": selected_tickers,
         }
         st.session_state["analysis_ready"] = True
+        st.session_state["analysis_scroll_reset"] = False
         st.rerun()
 
 
@@ -1732,6 +1924,7 @@ def render_analysis_header(config: dict[str, object]) -> None:
     with right:
         if st.button("Retroceder y ajustar selección", width="stretch"):
             st.session_state["analysis_ready"] = False
+            st.session_state["analysis_scroll_reset"] = False
             st.rerun()
 
 
@@ -1753,6 +1946,7 @@ def build_leader_takeaway(row: pd.Series, leader_red_flags: int) -> str:
     max_drawdown = _format_pct(row.get("max_drawdown"))
     ter = _format_pct_points(row.get("expense_ratio_pct"))
     alpha = _format_pct(row.get("alpha"))
+    committee_status = str(row.get("committee_status", "revisión manual"))
     alert_text = (
         "sin alertas cuantitativas materiales"
         if leader_red_flags == 0
@@ -1760,7 +1954,8 @@ def build_leader_takeaway(row: pd.Series, leader_red_flags: int) -> str:
     )
     return (
         f"{ticker} queda como {recommendation.lower()} por score relativo, "
-        f"CAGR {cagr}, alpha {alpha}, max drawdown {max_drawdown}, TER {ter} y {alert_text}."
+        f"CAGR {cagr}, alpha {alpha}, max drawdown {max_drawdown}, TER {ter} y {alert_text}. "
+        f"Estado de comité: {committee_status}."
     )
 
 
@@ -1804,6 +1999,7 @@ def render_result_headline(
         """,
         unsafe_allow_html=True,
     )
+    render_ic_brief(top)
 
 
 def render_analysis_rail(
@@ -1867,6 +2063,7 @@ def render_analysis_rail(
     )
     if st.button("Retroceder y ajustar selección", width="stretch", key="rail_adjust_selection"):
         st.session_state["analysis_ready"] = False
+        st.session_state["analysis_scroll_reset"] = False
         st.rerun()
 
     with st.expander("Metodología corta"):
@@ -1914,6 +2111,7 @@ def main() -> None:
         start_date = st.text_input("Fecha inicial", value="2021-01-01")
 
     if not st.session_state["analysis_ready"]:
+        st.session_state["analysis_scroll_reset"] = False
         intro_col, setup_col = st.columns([0.42, 0.58], gap="large")
         with intro_col:
             render_intro(compact=True)
@@ -1925,7 +2123,10 @@ def main() -> None:
     if not config or "mandate_label" not in config:
         st.session_state["analysis_ready"] = False
         st.session_state["analysis_config"] = None
+        st.session_state["analysis_scroll_reset"] = False
         st.rerun()
+
+    scroll_to_top_once("analysis_scroll_reset")
 
     selected_tickers = config["selected_tickers"]
     try:
@@ -1948,6 +2149,7 @@ def main() -> None:
         "top_10_concentration",
         "top_10_holdings",
         "alpha",
+        "committee_status",
     ]
     analysis = ensure_dashboard_columns(analysis, dashboard_optional_columns)
     red_flags = bundle.red_flags.copy()
@@ -2050,6 +2252,7 @@ def main() -> None:
                 "asset_class",
                 "benchmark_ticker",
                 "recommendation",
+                "committee_status",
                 "fund_selection_score",
                 "cagr",
                 "volatility",
@@ -2069,6 +2272,7 @@ def main() -> None:
                 "ticker",
                 "name",
                 "recommendation",
+                "committee_status",
                 "fund_selection_score",
                 "cagr",
                 "max_drawdown",
@@ -2084,6 +2288,7 @@ def main() -> None:
                 "asset_class": st.column_config.TextColumn("Clase de activo"),
                 "benchmark_ticker": st.column_config.TextColumn("Benchmark"),
                 "recommendation": st.column_config.TextColumn("Recomendación"),
+                "committee_status": st.column_config.TextColumn("Comité"),
                 "fund_selection_score": st.column_config.NumberColumn("Score", format="%.1f"),
                 "cagr": st.column_config.NumberColumn("CAGR", format="%.1%"),
                 "volatility": st.column_config.NumberColumn("Volatilidad", format="%.1%"),
@@ -2146,6 +2351,7 @@ def main() -> None:
             )
             detail_row = analysis.loc[analysis["ticker"] == selected_detail].iloc[0]
             render_etf_description(detail_row)
+            render_pm_checklist(detail_row)
 
             c1, c2, c3 = st.columns(3)
             with c1:

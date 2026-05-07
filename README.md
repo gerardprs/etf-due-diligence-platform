@@ -2,6 +2,12 @@
 
 Institutional-style analytics platform for ETF and fund screening, built for wealth management, family office, asset management, and investment advisory workflows.
 
+## Portfolio Positioning
+
+This project is designed to show investment judgement first and Python second. It automates the first-pass workflow a fund analyst would otherwise build manually in Excel: define the mandate, build a comparable peer group, assign benchmarks, calculate risk/return/liquidity/cost metrics, flag implementation risks, and produce a preliminary memo for PM review.
+
+**Core message for recruiters:** the candidate understands fund selection as an investment process, and uses Python automation to make that process faster, more consistent, and more auditable.
+
 ## Objective
 
 Create a Streamlit tool that supports preliminary ETF/fund due diligence by combining:
@@ -12,6 +18,7 @@ Create a Streamlit tool that supports preliminary ETF/fund due diligence by comb
 - liquidity and cost checks;
 - red flag detection;
 - an explainable Fund Selection Score;
+- investment committee status;
 - a preliminary due diligence memo.
 
 This is not a price prediction project. The goal is to simulate the type of decision-support tool an investment analyst could use before recommending a fund to a portfolio manager, advisor, or investment committee.

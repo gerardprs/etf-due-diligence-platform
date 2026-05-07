@@ -19,6 +19,7 @@ data/processed/alpha_vantage_cache/
 outputs/*.csv
 outputs/*.xlsx
 outputs/*.html
+outputs/*.png
 outputs/inspection/
 outputs/streamlit_logs/
 outputs/yura_cash_flow_2022_2023/
