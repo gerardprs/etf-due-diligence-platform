@@ -37,6 +37,15 @@ def _number(value: object, decimals: int = 2) -> str:
     return f"{numeric:.{decimals}f}"
 
 
+def _numeric(value: object) -> float:
+    """Return a float or NaN for robust memo conditionals."""
+
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return float("nan")
+    return float(numeric)
+
+
 def _multiple(value: object, decimals: int = 1) -> str:
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -103,9 +112,11 @@ def _committee_questions(row: pd.Series) -> list[str]:
         "Revisar holdings, concentración Top 10 y overlap con posiciones existentes del portafolio.",
         "Evaluar tratamiento tributario, versión UCITS/offshore disponible y restricciones de suitability del cliente.",
     ]
-    if pd.to_numeric(row.get("tracking_error"), errors="coerce") > 0.03:
+    tracking_error = _numeric(row.get("tracking_error"))
+    top_10 = _numeric(row.get("top_10_concentration"))
+    if pd.notna(tracking_error) and tracking_error > 0.03:
         questions.append("Explicar la fuente del tracking error antes de usarlo como exposición core.")
-    if pd.to_numeric(row.get("top_10_concentration"), errors="coerce") > 0.40:
+    if pd.notna(top_10) and top_10 > 0.40:
         questions.append("Preparar lectura de concentración por issuer y sensibilidad a mega caps.")
     return questions
 
