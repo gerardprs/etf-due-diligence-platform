@@ -2265,12 +2265,12 @@ def render_analysis_rail(
                     <div class="rail-value">{leader_red_flags}</div>
                 </div>
             </div>
+            <div class="rail-takeaway">
+                <strong>30-second read:</strong> {escape(takeaway)}
+            </div>
             <div class="rail-note">
                 Primero mira el ETF líder y sus alertas. Luego revisa benchmark fit,
                 drawdown, concentración y fuentes oficiales.
-            </div>
-            <div class="rail-takeaway">
-                <strong>30-second read:</strong> {escape(takeaway)}
             </div>
         </div>
         """,
@@ -2281,6 +2281,8 @@ def render_analysis_rail(
         st.session_state["analysis_ready"] = False
         st.session_state["analysis_scroll_reset"] = False
         st.rerun()
+
+    render_score_audit(top)
 
     with st.expander("Metodología corta"):
         st.markdown(
@@ -2393,8 +2395,6 @@ def main() -> None:
         memo_ticker = render_analysis_rail(config, top, leader_red_flags, scope_tickers)
 
     with output_col:
-        render_score_audit(top)
-
         tab_overview, tab_detail, tab_memo = st.tabs(
             ["Resumen Ejecutivo", "Análisis por ETF", "Memo de Due Diligence"]
         )
