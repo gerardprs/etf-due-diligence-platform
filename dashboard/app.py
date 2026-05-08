@@ -397,7 +397,7 @@ def apply_theme() -> None:
             color: var(--ink);
         }
         .block-container {
-            padding-top: 1.2rem;
+            padding-top: 1.75rem;
             padding-bottom: 2rem;
             max-width: 1320px;
         }
