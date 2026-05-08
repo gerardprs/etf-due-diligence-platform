@@ -67,7 +67,7 @@ MANDATE_PRESETS = {
     "US Growth / Technology": {
         "asset_class": "Growth Equity",
         "category": "US Growth / Technology",
-        "description": "ETFs orientados a growth, Nasdaq 100 o tecnología; cada ETF se evalúa contra un proxy de estilo más cercano.",
+        "description": "ETFs orientados a growth, Nasdaq 100 o tecnología; cada ETF se evalúa contra un proxy de estilo mas cercano.",
         "tickers": ["QQQM", "SCHG", "VUG", "IWF", "XLK", "VGT", "FTEC", "IYW"],
         "benchmarks": {
             "QQQM": "QQQ",
@@ -1526,7 +1526,7 @@ def local_committee_status_from_row(row: pd.Series) -> str:
     penalty = 0.0 if pd.isna(penalty) else float(penalty)
 
     if pd.isna(score):
-        return "Revisión manual requerida"
+        return "Revision manual requerida"
     if score >= 80 and red_flag_count == 0:
         return "Priorizar revisión"
     if score >= 70 and penalty <= 6:
@@ -1537,7 +1537,7 @@ def local_committee_status_from_row(row: pd.Series) -> str:
 
 
 def scroll_to_top_once(flag_name: str) -> None:
-    """Reinicia el scroll una vez después de cambiar de etapa."""
+    """Reinicia el scroll una vez despues de cambiar de etapa."""
 
     if st.session_state.get(flag_name):
         return
@@ -1615,19 +1615,19 @@ def _numeric_value(value: object) -> float:
 
 
 def mandate_fit_label(row: pd.Series) -> tuple[str, str]:
-    """Resume si el ETF cumple la exposición buscada."""
+    """Resume si el ETF cumple la exposicion buscada."""
 
     tracking_error = _numeric_value(row.get("tracking_error"))
     r_squared = _numeric_value(row.get("r_squared"))
     if pd.notna(tracking_error) and tracking_error <= 0.015 and pd.notna(r_squared) and r_squared >= 0.95:
-        return "Fit alto", "Tracking bajo y alta relación con benchmark."
+        return "Fit alto", "Tracking bajo y alta relacion con benchmark."
     if pd.notna(tracking_error) and tracking_error <= 0.035:
         return "Fit razonable", "Cumple mandato, pero revisar tracking relativo."
-    return "Revisar fit", "Validar benchmark, estrategia e índice subyacente."
+    return "Revisar fit", "Validar benchmark, estrategia e indice subyacente."
 
 
 def implementation_label(row: pd.Series) -> tuple[str, str]:
-    """Resume calidad de implementación usando escala, liquidez y costo."""
+    """Resume calidad de implementacion usando escala, liquidez y costo."""
 
     assets = _numeric_value(row.get("total_assets"))
     dollar_volume = _numeric_value(row.get("average_dollar_volume"))
@@ -1635,23 +1635,23 @@ def implementation_label(row: pd.Series) -> tuple[str, str]:
     liquid = pd.notna(assets) and assets >= 1_000_000_000 and pd.notna(dollar_volume) and dollar_volume >= 10_000_000
     cheap = pd.notna(expense) and expense <= 0.20
     if liquid and cheap:
-        return "Implementación eficiente", "Escala, liquidez y TER compatibles con uso operativo."
+        return "Implementacion eficiente", "Escala, liquidez y TER compatibles con uso operativo."
     if liquid:
         return "Implementable", "Buena escala/liquidez; revisar costo vs peer group."
-    return "Revisar ejecución", "Validar AUM, volumen, spreads y riesgo de cierre."
+    return "Revisar ejecucion", "Validar AUM, volumen, spreads y riesgo de cierre."
 
 
 def concentration_label(row: pd.Series) -> tuple[str, str]:
-    """Resume riesgo de concentración del ETF seleccionado."""
+    """Resume riesgo de concentracion del ETF seleccionado."""
 
     top_10 = _numeric_value(row.get("top_10_concentration"))
     if pd.isna(top_10):
-        return "Holdings por validar", "Confirmar Top 10 y metodología en factsheet."
+        return "Holdings por validar", "Confirmar Top 10 y metodologia en factsheet."
     if top_10 <= 0.35:
-        return "Concentración controlada", f"Top 10: {_format_pct(top_10)}."
+        return "Concentracion controlada", f"Top 10: {_format_pct(top_10)}."
     if top_10 <= 0.50:
-        return "Concentración relevante", f"Top 10: {_format_pct(top_10)}; revisar nombres dominantes."
-    return "Concentración alta", f"Top 10: {_format_pct(top_10)}; evaluar shocks idiosincráticos."
+        return "Concentracion relevante", f"Top 10: {_format_pct(top_10)}; revisar nombres dominantes."
+    return "Concentracion alta", f"Top 10: {_format_pct(top_10)}; evaluar shocks idiosincraticos."
 
 
 def render_ic_brief(row: pd.Series) -> None:
@@ -1660,7 +1660,7 @@ def render_ic_brief(row: pd.Series) -> None:
     mandate_label, mandate_note = mandate_fit_label(row)
     implementation, implementation_note = implementation_label(row)
     concentration, concentration_note = concentration_label(row)
-    committee_status = str(row.get("committee_status", "Revisión manual requerida"))
+    committee_status = str(row.get("committee_status", "Revision manual requerida"))
     red_flag_value = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
     red_flags = 0 if pd.isna(red_flag_value) else int(red_flag_value)
     status_note = "Sin alertas materiales." if red_flags == 0 else f"{red_flags} alerta(s) para validar."
@@ -1674,12 +1674,12 @@ def render_ic_brief(row: pd.Series) -> None:
                 <div class="ic-brief-note">{escape(mandate_note)}</div>
             </div>
             <div class="ic-brief-card">
-                <div class="ic-brief-label">Implementación</div>
+                <div class="ic-brief-label">Implementacion</div>
                 <div class="ic-brief-value">{escape(implementation)}</div>
                 <div class="ic-brief-note">{escape(implementation_note)}</div>
             </div>
             <div class="ic-brief-card">
-                <div class="ic-brief-label">Concentración</div>
+                <div class="ic-brief-label">Concentracion</div>
                 <div class="ic-brief-value">{escape(concentration)}</div>
                 <div class="ic-brief-note">{escape(concentration_note)}</div>
             </div>
@@ -1695,7 +1695,7 @@ def render_ic_brief(row: pd.Series) -> None:
 
 
 def render_pm_checklist(row: pd.Series) -> None:
-    """Muestra checks cualitativos pendientes después del screening."""
+    """Muestra checks cualitativos pendientes despues del screening."""
 
     ticker = str(row.get("ticker", "")).upper()
     benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
@@ -1704,10 +1704,10 @@ def render_pm_checklist(row: pd.Series) -> None:
         <div class="pm-checklist">
             <div class="pm-checklist-title">Checks pendientes antes de avanzar con {escape(ticker)}</div>
             <ul>
-                <li>¿El índice y la metodología replican exactamente la exposición buscada frente a {escape(benchmark)}?</li>
-                <li>¿El TER, AUM y volumen justifican usar este vehículo frente a peers más baratos o líquidos?</li>
-                <li>¿La concentración Top 10 y el overlap con cartera existente crean exposición duplicada?</li>
-                <li>¿Hay consideraciones de impuestos, UCITS/offshore, spreads o securities lending que cambien la implementación?</li>
+                <li>El indice y la metodologia replican exactamente la exposicion buscada frente a {escape(benchmark)}?</li>
+                <li>El TER, AUM y volumen justifican usar este vehiculo frente a peers mas baratos o liquidos?</li>
+                <li>La concentracion Top 10 y el overlap con cartera existente crean exposicion duplicada?</li>
+                <li>Hay consideraciones de impuestos, UCITS/offshore, spreads o securities lending que cambien la implementacion?</li>
             </ul>
         </div>
         """,
@@ -1721,7 +1721,7 @@ def render_memo_decision_summary(row: pd.Series) -> None:
     ticker = str(row.get("ticker", "")).upper()
     score = _score_text(row.get("fund_selection_score"))
     recommendation = str(row.get("recommendation", "n/a"))
-    committee_status = str(row.get("committee_status", "Revisión manual requerida"))
+    committee_status = str(row.get("committee_status", "Revision manual requerida"))
     benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
     alpha = _format_pct(row.get("alpha"))
     drawdown = _format_pct(row.get("max_drawdown"))
@@ -1764,8 +1764,8 @@ def render_memo_decision_summary(row: pd.Series) -> None:
             <div class="memo-question-title">Checks cualitativos para completar la revision</div>
             <ul>
                 <li><strong>Mandato:</strong> {escape(mandate_label)}. {escape(mandate_note)}</li>
-                <li><strong>ImplementaciÃ³n:</strong> {escape(implementation)}. {escape(implementation_note)}</li>
-                <li><strong>ConcentraciÃ³n:</strong> {escape(concentration)}. {escape(concentration_note)}</li>
+                <li><strong>Implementacion:</strong> {escape(implementation)}. {escape(implementation_note)}</li>
+                <li><strong>Concentracion:</strong> {escape(concentration)}. {escape(concentration_note)}</li>
                 <li><strong>Fuente oficial:</strong> confirmar TER, holdings, indice, spread y tratamiento tributario contra factsheet.</li>
             </ul>
         </div>
@@ -1797,7 +1797,7 @@ def render_score_explanation() -> None:
     st.subheader("Cómo se interpreta el score de priorización")
     st.markdown(
         """
-        El score no intenta decir “compra este ETF”. Es un **ranking preliminar de due diligence** para priorizar qué fondos merecen revisión más profunda.
+        El score no intenta decir “compra este ETF”. Es un **ranking preliminar de due diligence** para priorizar qué fondos merecen revisión mas profunda.
 
         Primero, cada ETF se evalúa contra su benchmark asignado. Luego, los ETFs seleccionados se comparan entre sí dentro del mandato elegido.
         """
@@ -1810,7 +1810,7 @@ def render_score_explanation() -> None:
             ("Benchmark fit", "20%", "Tracking error, R² e information ratio vs benchmark."),
             ("Liquidez", "15%", "AUM y volumen promedio en dólares."),
             ("Costo", "15%", "Expense ratio relativo dentro del peer group."),
-            ("Penalizaciones", "Hasta -30 pts", "Alertas por drawdown, tracking, costo, liquidez, P/E o concentración."),
+            ("Penalizaciones", "Hasta -30 pts", "Alertas por drawdown, tracking, costo, liquidez, P/E o concentracion."),
         ],
         columns=["Componente", "Peso", "Qué captura"],
     )
@@ -1853,7 +1853,7 @@ def render_score_explanation() -> None:
     with st.expander("+ Benchmark Fit Score"):
         st.markdown(
             """
-            Evalúa si el ETF cumple la exposición que promete frente a su benchmark asignado.
+            Evalúa si el ETF cumple la exposicion que promete frente a su benchmark asignado.
 
             ```text
             Benchmark Fit Score =
@@ -1862,14 +1862,14 @@ def render_score_explanation() -> None:
             + 25% * Score(Information Ratio)
             ```
 
-            Un ETF core debería tener tracking error bajo y alta relación con su benchmark. El beta se calcula, pero no se premia automáticamente porque algunos mandatos smart beta o defensivos pueden buscar beta distinto de 1.
+            Un ETF core debería tener tracking error bajo y alta relacion con su benchmark. El beta se calcula, pero no se premia automáticamente porque algunos mandatos smart beta o defensivos pueden buscar beta distinto de 1.
             """
         )
 
     with st.expander("+ Liquidity Score"):
         st.markdown(
             """
-            Evalúa facilidad de implementación.
+            Evalúa facilidad de implementacion.
 
             ```text
             Liquidity Score =
@@ -1907,7 +1907,7 @@ def render_score_explanation() -> None:
             Penalización máxima = -30 puntos
             ```
 
-            Ejemplos: tracking error alto, drawdown elevado, CAGR negativo, baja liquidez, AUM bajo, costo alto, P/E elevado, concentración Top 10 o metadata faltante.
+            Ejemplos: tracking error alto, drawdown elevado, CAGR negativo, baja liquidez, AUM bajo, costo alto, P/E elevado, concentracion Top 10 o metadata faltante.
             """
         )
 
@@ -1941,7 +1941,7 @@ def render_score_explanation() -> None:
 
 
 def render_score_methodology_summary() -> None:
-    """Muestra un resumen corto de la metodología del score."""
+    """Muestra un resumen corto de la metodologia del score."""
 
     st.markdown(
         """
@@ -1955,7 +1955,7 @@ def render_score_methodology_summary() -> None:
             ("Benchmark fit", "20%", "Tracking error, R² e information ratio"),
             ("Liquidez", "15%", "AUM y volumen promedio en dólares"),
             ("Costo", "15%", "Expense ratio"),
-            ("Penalizaciones", "Hasta -30 pts", "Red flags de riesgo, liquidez, costo, P/E o concentración"),
+            ("Penalizaciones", "Hasta -30 pts", "Red flags de riesgo, liquidez, costo, P/E o concentracion"),
         ],
         columns=["Bloque", "Peso", "Qué revisa"],
     )
@@ -2032,7 +2032,7 @@ def render_etf_description(row: pd.Series) -> None:
         f"""
         <div class="etf-description">
             <strong>{escape(ticker)} - {escape(name_text)}</strong><br>
-            {escape(detail_text)}. Esta vista resume performance, riesgo relativo, costo, liquidez y concentración del ETF seleccionado.
+            {escape(detail_text)}. Esta vista resume performance, riesgo relativo, costo, liquidez y concentracion del ETF seleccionado.
         </div>
         """,
         unsafe_allow_html=True,
@@ -2252,7 +2252,7 @@ def render_intro(compact: bool = False) -> None:
         <div class="workflow-card">
             <div class="workflow-number">Paso 1</div>
             <div class="workflow-title">Mandato</div>
-            <div class="workflow-copy">Parte de la pregunta real de cartera: qué exposición necesita cubrir el mandato.</div>
+            <div class="workflow-copy">Parte de la pregunta real de cartera: qué exposicion necesita cubrir el mandato.</div>
         </div>
         """,
         """
@@ -2290,7 +2290,7 @@ def render_intro(compact: bool = False) -> None:
             """
         )
 
-    with st.expander("Ver metodología resumida del score"):
+    with st.expander("Ver metodologia resumida del score"):
         render_score_methodology_summary()
 
     with st.expander("Ver fuente de datos y disclaimer"):
@@ -2328,7 +2328,7 @@ def render_screening_controls() -> tuple[str, list[str]]:
         "1. Selecciona el mandato de inversión",
         options=list(MANDATE_PRESETS.keys()),
         index=0,
-        help="Un fund selector parte del mandato: qué exposición quiere cubrir en cartera.",
+        help="Un fund selector parte del mandato: qué exposicion quiere cubrir en cartera.",
     )
     preset = MANDATE_PRESETS[mandate]
     available_tickers = preset["tickers"]
@@ -2811,7 +2811,7 @@ def main() -> None:
                     "Ayuda a dimensionar pérdida potencial y tiempo de recuperación."
                 )
             with risk_right:
-                render_section_heading("Concentración Top 10")
+                render_section_heading("Concentracion Top 10")
                 holdings_table = load_top_holdings_table(
                     selected_detail,
                     detail_row.get("top_10_holdings"),
@@ -2827,7 +2827,7 @@ def main() -> None:
                 else:
                     st.caption(
                         "La dona separa los 5 mayores holdings, el resto del Top 10 y el resto del ETF. "
-                        "A mayor concentración, mayor sensibilidad a shocks específicos de esos emisores."
+                        "A mayor concentracion, mayor sensibilidad a shocks específicos de esos emisores."
                     )
 
         with tab_memo:
