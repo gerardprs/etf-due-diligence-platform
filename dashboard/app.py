@@ -2137,32 +2137,14 @@ def render_result_headline(
 ) -> None:
     """Render the first thing a recruiter or analyst should understand."""
 
-    ticker = str(top.get("ticker", "")).upper()
-    recommendation = str(top.get("recommendation", "n/a"))
-    score = _score_text(top.get("fund_selection_score"))
     takeaway = build_leader_takeaway(top, leader_red_flags)
     st.markdown(
         f"""
         <div class="result-panel">
             <div class="result-title">Resultado ejecutivo del screening</div>
             <div class="result-copy">
-                Mandato: <strong>{escape(str(config["mandate_label"]))}</strong>.
-                La app compara un peer group de {scope_count} ETFs, asigna benchmark por ETF,
-                calcula métricas clave y prioriza el fondo que merece revisión.
-            </div>
-            <div class="quick-read-grid">
-                <div class="quick-read-card">
-                    <div class="quick-read-label">ETF líder</div>
-                    <div class="quick-read-value">{escape(ticker)}</div>
-                </div>
-                <div class="quick-read-card">
-                    <div class="quick-read-label">Score</div>
-                    <div class="quick-read-value">{escape(score)} / 100</div>
-                </div>
-                <div class="quick-read-card">
-                    <div class="quick-read-label">Lectura</div>
-                    <div class="quick-read-value">{escape(recommendation)}</div>
-                </div>
+                La lectura de la izquierda resume el universo, líder y score. Esta zona se enfoca
+                en la conclusión ejecutiva y las validaciones que revisaría un PM.
             </div>
             <div class="result-copy"><strong>30-second read:</strong> {escape(takeaway)}</div>
         </div>
