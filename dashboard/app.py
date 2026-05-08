@@ -2415,35 +2415,9 @@ def main() -> None:
                 else:
                     min_chart_date = pd.Timestamp(comparison_base.index.min())
                     max_chart_date = pd.Timestamp(comparison_base.index.max())
-                    period_preset = st.selectbox(
-                        "Periodo del gráfico",
-                        options=[
-                            "Todo el periodo",
-                            "YTD",
-                            "Último año",
-                            "Últimos 3 años",
-                            "Rango personalizado",
-                        ],
-                        index=0,
-                    )
-
-                    if period_preset == "Rango personalizado":
-                        selected_range = st.date_input(
-                            "Rango de fechas",
-                            value=(min_chart_date.date(), max_chart_date.date()),
-                            min_value=min_chart_date.date(),
-                            max_value=max_chart_date.date(),
-                        )
-                        if isinstance(selected_range, tuple) and len(selected_range) == 2:
-                            chart_start, chart_end = selected_range
-                        else:
-                            chart_start, chart_end = min_chart_date.date(), max_chart_date.date()
-                    else:
-                        chart_start, chart_end = date_window_from_preset(
-                            period_preset,
-                            min_chart_date,
-                            max_chart_date,
-                        )
+                    default_range = (min_chart_date.date(), max_chart_date.date())
+                    range_key = f"overview_date_range_{config['mandate_label']}"
+                    chart_start, chart_end = st.session_state.get(range_key, default_range)
 
                     rebased_cumulative = rebase_cumulative_window(
                         cumulative,
@@ -2458,6 +2432,14 @@ def main() -> None:
                     st.caption(
                         "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
                         "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
+                    )
+                    st.slider(
+                        "Rango de fechas del gráfico",
+                        min_value=min_chart_date.date(),
+                        max_value=max_chart_date.date(),
+                        value=(chart_start, chart_end),
+                        format="YYYY-MM-DD",
+                        key=range_key,
                     )
 
             ranking_columns = [
