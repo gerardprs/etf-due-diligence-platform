@@ -2204,7 +2204,6 @@ def render_result_headline(
         """,
         unsafe_allow_html=True,
     )
-    render_ic_brief(top)
 
 
 def render_analysis_rail(
