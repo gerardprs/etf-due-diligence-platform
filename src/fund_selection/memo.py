@@ -88,21 +88,21 @@ def _risks(row: pd.Series, ticker_flags: pd.DataFrame) -> list[str]:
 
 
 def _decision_view(row: pd.Series) -> str:
-    """Build an investment-office decision sentence."""
+    """Build a first-screening decision sentence."""
 
     ticker = row.get("ticker")
     committee_status = row.get("committee_status", "Revisión manual requerida")
     recommendation = row.get("recommendation", "n/a")
     score = _number(row.get("fund_selection_score"), 1)
     return (
-        f"{ticker} queda en estado **{committee_status}** con recomendación cuantitativa "
+        f"{ticker} queda en estado **{committee_status}** con lectura cuantitativa "
         f"**{recommendation}** y score de **{score}/100**. El resultado debe interpretarse "
-        "como priorización de due diligence, no como orden de compra."
+        "como priorización de revisión, no como orden de compra."
     )
 
 
 def _committee_questions(row: pd.Series) -> list[str]:
-    """Generate PM-style questions that remain after quantitative screening."""
+    """Generate qualitative checks that remain after quantitative screening."""
 
     ticker = str(row.get("ticker", "")).upper()
     benchmark = row.get("benchmark_ticker", "benchmark asignado")
@@ -154,8 +154,8 @@ def generate_due_diligence_memo(
 **Clase de Activo:** {row.get("asset_class", "n/a")}
 **Benchmark:** {row.get("benchmark_ticker", "n/a")}
 **Recomendación:** {row.get("recommendation", "n/a")}
-**Estado Comité:** {row.get("committee_status", "n/a")}
-**Fund Selection Score:** {_number(row.get("fund_selection_score"), 1)} / 100
+**Siguiente paso:** {row.get("committee_status", "n/a")}
+**Score de priorización:** {_number(row.get("fund_selection_score"), 1)} / 100
 
 ## 3. Resumen Cuantitativo
 
@@ -185,13 +185,13 @@ def generate_due_diligence_memo(
 
 {risks}
 
-## 7. Preguntas Para Comité / PM
+## 7. Checks Cualitativos Pendientes
 
 {questions}
 
 ## 8. Vista Preliminar
 
-Este memo automatiza la primera lectura que normalmente se haría en Excel: ranking relativo, benchmark fit, riesgo de pérdida, liquidez, costo, concentración y alertas. Antes de implementar una recomendación, el analista debe validar metodología del índice, composición, overlap con cartera, consideraciones tributarias, comportamiento de spreads, política de securities lending y restricciones de suitability del cliente.
+Este memo automatiza la primera lectura que normalmente se haría en Excel: ranking relativo, benchmark fit, riesgo de pérdida, liquidez, costo, concentración y alertas. Antes de tomar una decisión de inversión, el analista debe validar metodología del índice, composición, overlap con cartera, consideraciones tributarias, comportamiento de spreads, política de securities lending y restricciones de suitability del cliente.
 """
 
     return memo

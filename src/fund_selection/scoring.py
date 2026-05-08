@@ -102,11 +102,11 @@ def recommendation_from_score(score: float) -> str:
 
 
 def committee_status_from_row(row: pd.Series) -> str:
-    """Translate score and flags into an investment committee workflow status.
+    """Translate score and flags into a next-step workflow status.
 
-    The Fund Selection Score is useful for ranking, but an analyst still needs
-    a decision-language output: which funds move forward, which stay in the
-    watchlist, and which require deeper qualitative work before a PM sees them.
+    The score is useful for ranking, but an analyst still needs a plain-language
+    output: which funds deserve review, which stay in the watchlist, and which
+    are not worth prioritizing without a qualitative reason.
     """
 
     score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
@@ -118,12 +118,12 @@ def committee_status_from_row(row: pd.Series) -> str:
     if pd.isna(score):
         return "Revisión manual requerida"
     if score >= 80 and red_flag_count == 0:
-        return "Avanza a shortlist"
+        return "Priorizar revisión"
     if score >= 70 and penalty <= 6:
         return "Apto con validación cualitativa"
     if score >= 50:
         return "Watchlist / revisar supuestos"
-    return "Descartar salvo razón cualitativa"
+    return "No priorizar salvo razón cualitativa"
 
 
 def score_funds(

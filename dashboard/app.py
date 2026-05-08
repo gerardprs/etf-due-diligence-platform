@@ -1159,7 +1159,7 @@ def score_bar_chart(analysis: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         height=chart_height,
         margin=dict(l=20, r=20, t=10, b=20),
-        xaxis=dict(range=[0, 100], title="Fund Selection Score"),
+        xaxis=dict(range=[0, 100], title="Score de priorización"),
         yaxis=dict(title=""),
         plot_bgcolor=CHART_BG,
         paper_bgcolor=CHART_BG,
@@ -1473,7 +1473,7 @@ def metric_table(row: pd.Series) -> pd.DataFrame:
             ("TER", _format_pct_points(row.get("expense_ratio_pct")), "Total Expense Ratio anual del ETF según metadata disponible."),
             ("AUM", _format_money(row.get("total_assets")), "Activos bajo gestión; proxy de escala y estabilidad."),
             ("Volumen Promedio USD", _format_money(row.get("average_dollar_volume")), "Proxy de liquidez operativa diaria."),
-            ("Estado Comité", str(row.get("committee_status", "n/a")), "Lectura operativa para decidir si avanza, queda en watchlist o requiere revisión manual."),
+            ("Siguiente paso", str(row.get("committee_status", "n/a")), "Lectura operativa para priorizar revisión, watchlist o descarte preliminar."),
         ],
         columns=["Métrica", "Valor", "Descripción"],
     )
@@ -1518,7 +1518,7 @@ def ensure_committee_status(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def local_committee_status_from_row(row: pd.Series) -> str:
-    """Local fallback for investment committee status in deployed dashboards."""
+    """Local fallback for next-step status in deployed dashboards."""
 
     score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
     red_flag_count = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
@@ -1529,12 +1529,12 @@ def local_committee_status_from_row(row: pd.Series) -> str:
     if pd.isna(score):
         return "Revisión manual requerida"
     if score >= 80 and red_flag_count == 0:
-        return "Avanza a shortlist"
+        return "Priorizar revisión"
     if score >= 70 and penalty <= 6:
         return "Apto con validación cualitativa"
     if score >= 50:
         return "Watchlist / revisar supuestos"
-    return "Descartar salvo razón cualitativa"
+    return "No priorizar salvo razón cualitativa"
 
 
 def scroll_to_top_once(flag_name: str) -> None:
@@ -1636,7 +1636,7 @@ def implementation_label(row: pd.Series) -> tuple[str, str]:
     liquid = pd.notna(assets) and assets >= 1_000_000_000 and pd.notna(dollar_volume) and dollar_volume >= 10_000_000
     cheap = pd.notna(expense) and expense <= 0.20
     if liquid and cheap:
-        return "Implementación eficiente", "Escala, liquidez y TER compatibles con uso institucional."
+        return "Implementación eficiente", "Escala, liquidez y TER compatibles con uso operativo."
     if liquid:
         return "Implementable", "Buena escala/liquidez; revisar costo vs peer group."
     return "Revisar ejecución", "Validar AUM, volumen, spreads y riesgo de cierre."
@@ -1656,7 +1656,7 @@ def concentration_label(row: pd.Series) -> tuple[str, str]:
 
 
 def render_ic_brief(row: pd.Series) -> None:
-    """Render a PM-style decision brief above the detailed analytics."""
+    """Render a compact decision brief above the detailed analytics."""
 
     mandate_label, mandate_note = mandate_fit_label(row)
     implementation, implementation_note = implementation_label(row)
@@ -1685,7 +1685,7 @@ def render_ic_brief(row: pd.Series) -> None:
                 <div class="ic-brief-note">{escape(concentration_note)}</div>
             </div>
             <div class="ic-brief-card">
-                <div class="ic-brief-label">Comité</div>
+                <div class="ic-brief-label">Siguiente paso</div>
                 <div class="ic-brief-value">{escape(committee_status)}</div>
                 <div class="ic-brief-note">{escape(status_note)}</div>
             </div>
@@ -1703,7 +1703,7 @@ def render_pm_checklist(row: pd.Series) -> None:
     st.markdown(
         f"""
         <div class="pm-checklist">
-            <div class="pm-checklist-title">Preguntas de PM antes de avanzar con {escape(ticker)}</div>
+            <div class="pm-checklist-title">Checks pendientes antes de avanzar con {escape(ticker)}</div>
             <ul>
                 <li>¿El índice y la metodología replican exactamente la exposición buscada frente a {escape(benchmark)}?</li>
                 <li>¿El TER, AUM y volumen justifican usar este vehículo frente a peers más baratos o líquidos?</li>
@@ -1717,12 +1717,12 @@ def render_pm_checklist(row: pd.Series) -> None:
 
 
 def render_memo_decision_summary(row: pd.Series) -> None:
-    """Render the memo's investment decision before the full text."""
+    """Render the memo's preliminary screening decision before the full text."""
 
     ticker = str(row.get("ticker", "")).upper()
     score = _score_text(row.get("fund_selection_score"))
     recommendation = str(row.get("recommendation", "n/a"))
-    committee_status = str(row.get("committee_status", "RevisiÃ³n manual requerida"))
+    committee_status = str(row.get("committee_status", "Revisión manual requerida"))
     benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
     alpha = _format_pct(row.get("alpha"))
     drawdown = _format_pct(row.get("max_drawdown"))
@@ -1735,12 +1735,12 @@ def render_memo_decision_summary(row: pd.Series) -> None:
     st.markdown(
         f"""
         <div class="memo-decision-panel">
-            <div class="memo-decision-kicker">Lectura de Investment Committee</div>
+            <div class="memo-decision-kicker">Lectura preliminar</div>
             <div class="memo-decision-title">{escape(ticker)}: {escape(committee_status)}</div>
             <div class="memo-decision-copy">
-                El memo no genera una recomendacion de compra; prioriza si el ETF merece due diligence
-                adicional. Se compara contra {escape(benchmark)}, revisando retorno ajustado por riesgo,
-                benchmark fit, costo, liquidez, concentracion y red flags.
+                Este borrador no es una recomendacion de compra. Resume si el ETF merece revision
+                adicional frente a {escape(benchmark)}, considerando retorno ajustado por riesgo,
+                benchmark fit, costo, liquidez, concentracion y alertas.
             </div>
             <div class="memo-decision-grid">
                 <div class="memo-decision-stat">
@@ -1762,7 +1762,7 @@ def render_memo_decision_summary(row: pd.Series) -> None:
             </div>
         </div>
         <div class="memo-question-list">
-            <div class="memo-question-title">Preguntas que un PM validaria antes de aprobar</div>
+            <div class="memo-question-title">Checks cualitativos para completar la revision</div>
             <ul>
                 <li><strong>Mandato:</strong> {escape(mandate_label)}. {escape(mandate_note)}</li>
                 <li><strong>ImplementaciÃ³n:</strong> {escape(implementation)}. {escape(implementation_note)}</li>
@@ -1795,7 +1795,7 @@ def render_external_link(label: str, url: object) -> None:
 def render_score_explanation() -> None:
     """Explain the Fund Selection Score in recruiter-friendly language."""
 
-    st.subheader("Cómo se interpreta el Fund Selection Score")
+    st.subheader("Cómo se interpreta el score de priorización")
     st.markdown(
         """
         El score no intenta decir “compra este ETF”. Es un **ranking preliminar de due diligence** para priorizar qué fondos merecen revisión más profunda.
@@ -1916,7 +1916,7 @@ def render_score_explanation() -> None:
         st.markdown(
             """
             ```text
-            Fund Selection Score =
+            Score de priorización =
               25% * Performance Score
             + 25% * Risk Score
             + 20% * Benchmark Fit Score
@@ -1946,7 +1946,7 @@ def render_score_methodology_summary() -> None:
 
     st.markdown(
         """
-        El score es un **ranking de due diligence**, no una recomendación. Primero compara cada ETF contra su benchmark asignado usando retornos históricos; luego ordena los ETFs del mismo mandato.
+        El score es un **ranking preliminar**, no una recomendación. Primero compara cada ETF contra su benchmark asignado usando retornos históricos; luego ordena los ETFs del mismo mandato.
         """
     )
     methodology = pd.DataFrame(
@@ -2078,7 +2078,7 @@ def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
             ("Clase de activo", str(row.get("asset_class", "n/a"))),
             ("Benchmark asignado", str(row.get("benchmark_ticker", "n/a"))),
             ("Recomendación", str(row.get("recommendation", "n/a"))),
-            ("Estado comité", str(row.get("committee_status", "n/a"))),
+            ("Siguiente paso", str(row.get("committee_status", "n/a"))),
             ("Score", _score_text(row.get("fund_selection_score"))),
             ("CAGR", _format_pct(row.get("cagr"))),
             ("Volatilidad", _format_pct(row.get("volatility"))),
@@ -2212,7 +2212,7 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
                     </div>
                 </div>
                 <div class="ranking-committee">
-                    <div class="ranking-label">Comité</div>
+                    <div class="ranking-label">Siguiente paso</div>
                     <div class="ranking-value">{escape(committee)}</div>
                 </div>
                 <div class="ranking-score">
@@ -2237,10 +2237,11 @@ def render_intro(compact: bool = False) -> None:
                 Hecho por <a href="https://www.linkedin.com/in/gerardosparedesromero25" target="_blank">Gerardo Paredes Romero</a>
                 | Data Analytics · Python Automation · Investment Analytics
             </div>
-            <div class="hero-title">ETF Due Diligence Automation Platform</div>
+            <div class="hero-title">ETF Screening & Due Diligence Dashboard</div>
             <div class="hero-copy">
-                Automatiza un screening preliminar de ETFs: mandato, peer group, benchmark por fondo,
-                score, alertas y memo ejecutivo. Proyecto educativo, no recomendación de inversión.
+                Herramienta de investment analytics en Python para automatizar el primer filtro de ETFs:
+                mandato, peer group, benchmark por fondo, score de priorización, alertas y memo preliminar.
+                Proyecto educativo, no recomendación de inversión.
             </div>
         </div>
         """,
@@ -2265,8 +2266,8 @@ def render_intro(compact: bool = False) -> None:
         """
         <div class="workflow-card red">
             <div class="workflow-number">Paso 3</div>
-            <div class="workflow-title">Due Diligence Output</div>
-            <div class="workflow-copy">Entrega shortlist, red flags y memo accionable para priorizar revisión del PM.</div>
+            <div class="workflow-title">Output del screening</div>
+            <div class="workflow-copy">Entrega ranking, alertas y borrador de memo para priorizar revisión del analista.</div>
         </div>
         """,
     ]
@@ -2284,9 +2285,9 @@ def render_intro(compact: bool = False) -> None:
             1. Selecciona mandato y peer group.
             2. Asigna benchmark por ETF.
             3. Calcula riesgo, performance, costo y liquidez.
-            4. Prioriza shortlist, alertas y memo preliminar.
+            4. Prioriza ranking, alertas y memo preliminar.
 
-            **Valor operativo:** convierte un screening repetitivo de Excel en un flujo reproducible.
+            **Valor operativo:** convierte un screening repetitivo de Excel en un flujo reproducible y auditable.
             """
         )
 
@@ -2459,7 +2460,7 @@ def build_leader_takeaway(row: pd.Series, leader_red_flags: int) -> str:
     return (
         f"{ticker} queda como {recommendation.lower()} por score relativo, "
         f"CAGR {cagr}, alpha {alpha}, max drawdown {max_drawdown}, TER {ter} y {alert_text}. "
-        f"Estado de comité: {committee_status}."
+        f"Siguiente paso: {committee_status}."
     )
 
 
@@ -2475,9 +2476,9 @@ def render_result_headline(
     st.markdown(
         f"""
         <div class="result-panel">
-            <div class="result-title">Resultado ejecutivo del screening</div>
+            <div class="result-title">Resultado del screening</div>
             <div class="result-copy">
-                Lectura rápida del universo: ETF líder, score, alertas y siguiente decisión.
+                Lectura rápida del universo: ETF líder, score, alertas y siguiente paso de revisión.
             </div>
             <div class="result-copy"><strong>30-second read:</strong> {escape(takeaway)}</div>
         </div>
@@ -2502,10 +2503,10 @@ def render_analysis_rail(
     st.markdown(
         f"""
         <div class="rail-panel">
-            <div class="rail-kicker">ETF Due Diligence Automation</div>
-            <div class="rail-title">Vista de decisión</div>
+            <div class="rail-kicker">ETF Screening Automation</div>
+            <div class="rail-title">Vista rápida</div>
             <div class="rail-copy">
-                Screening automatizado de ETFs para ranking, alertas y memo preliminar.
+                Primer filtro automatizado de ETFs para ranking, alertas y memo preliminar.
             </div>
             <div class="rail-divider"></div>
             <div class="rail-copy">
@@ -2636,7 +2637,7 @@ def main() -> None:
 
     with output_col:
         tab_overview, tab_detail, tab_memo = st.tabs(
-            ["Resumen Ejecutivo", "Análisis por ETF", "Memo de Due Diligence"]
+            ["Resumen Ejecutivo", "Análisis por ETF", "Memo preliminar"]
         )
 
         with tab_overview:
@@ -2838,7 +2839,7 @@ def main() -> None:
                 memo_text = generate_due_diligence_memo(memo_ticker, analysis, red_flags)
             except Exception:
                 memo_text = bundle.memos.get(memo_ticker, "Memo no disponible para este ETF.")
-            with st.expander("Ver memo completo generado por reglas", expanded=False):
+            with st.expander("Ver borrador completo generado por reglas", expanded=False):
                 st.markdown(memo_text)
 
 
