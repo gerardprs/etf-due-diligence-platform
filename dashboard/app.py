@@ -2736,27 +2736,8 @@ def main() -> None:
                 "yahoo_finance_url",
                 "issuer_url",
             ]
-            executive_columns = [
-                "ticker",
-                "name",
-                "benchmark_ticker",
-                "recommendation",
-                "committee_status",
-                "fund_selection_score",
-                "cagr",
-                "max_drawdown",
-                "alpha",
-                "valuation_pe",
-                "top_10_concentration",
-                "expense_ratio_pct",
-                "average_dollar_volume",
-                "red_flag_count",
-            ]
             render_section_heading("Tabla Ejecutiva de Ranking")
-            render_executive_ranking(filtered[executive_columns])
-
-            with st.expander("Ver ficha completa por ETF con benchmark, liquidez y fuentes"):
-                render_vertical_ranking_details(filtered[ranking_columns])
+            render_executive_ranking(filtered[ranking_columns])
 
             if not red_flags.empty:
                 render_section_heading("Alertas")
