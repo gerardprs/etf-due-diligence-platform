@@ -2279,9 +2279,6 @@ def render_intro(compact: bool = False) -> None:
         for column, card in zip([c1, c2, c3], workflow_cards):
             column.markdown(card, unsafe_allow_html=True)
 
-    with st.expander("Ver metodología resumida del score"):
-        render_score_methodology_summary()
-
     with st.expander("Ver workflow automatizado"):
         st.markdown(
             """
@@ -2298,6 +2295,9 @@ def render_intro(compact: bool = False) -> None:
             auditable y consistente entre mandatos.
             """
         )
+
+    with st.expander("Ver metodología resumida del score"):
+        render_score_methodology_summary()
 
     with st.expander("Ver fuente de datos y disclaimer"):
         st.markdown(
@@ -2762,7 +2762,6 @@ def main() -> None:
             )
             detail_row = analysis.loc[analysis["ticker"] == selected_detail].iloc[0]
             render_etf_description(detail_row)
-            render_pm_checklist(detail_row)
 
             c1, c2, c3 = st.columns(3)
             with c1:
