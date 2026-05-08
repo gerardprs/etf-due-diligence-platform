@@ -604,14 +604,14 @@ def apply_theme() -> None:
         }
         .ranking-row {
             display: grid;
-            grid-template-columns: 42px minmax(180px, 1.25fr) minmax(130px, 0.75fr) minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(170px, 0.95fr);
+            grid-template-columns: 42px minmax(330px, 1.65fr) minmax(125px, 0.62fr) minmax(155px, 0.78fr) minmax(130px, 0.72fr);
             gap: 0.8rem;
-            align-items: center;
+            align-items: stretch;
             background: var(--surface);
             border: 1px solid var(--line);
             border-left: 4px solid var(--teal);
             border-radius: 8px;
-            padding: 0.78rem 0.86rem;
+            padding: 0.82rem 0.9rem;
             box-shadow: 0 8px 22px rgba(24, 49, 63, 0.05);
         }
         .ranking-row.preferred { border-left-color: var(--teal); }
@@ -630,6 +630,7 @@ def apply_theme() -> None:
             color: var(--ink);
             font-size: 0.78rem;
             font-weight: 780;
+            align-self: center;
         }
         .ranking-ticker {
             color: var(--ink);
@@ -642,6 +643,32 @@ def apply_theme() -> None:
             font-size: 0.78rem;
             line-height: 1.32;
             margin-top: 0.12rem;
+        }
+        .ranking-dd-snapshot {
+            display: grid;
+            gap: 0.48rem;
+        }
+        .ranking-dd-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.35rem;
+        }
+        .ranking-dd-cell {
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 0.34rem 0.42rem;
+            min-width: 0;
+        }
+        .ranking-dd-cell .ranking-label {
+            font-size: 0.62rem;
+        }
+        .ranking-dd-cell .ranking-value {
+            font-size: 0.76rem;
+            margin-top: 0.08rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .ranking-label {
             color: var(--muted);
@@ -723,7 +750,14 @@ def apply_theme() -> None:
             .ranking-row {
                 grid-template-columns: 38px minmax(160px, 1fr);
             }
-            .ranking-metrics {
+            .ranking-dd-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .ranking-metrics,
+            .ranking-dd-snapshot,
+            .ranking-status,
+            .ranking-committee,
+            .ranking-score {
                 grid-column: 2 / -1;
             }
             .ranking-detail-grid {
@@ -2056,6 +2090,7 @@ def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
             ("Top 10 Concentration", _format_pct(row.get("top_10_concentration"))),
             ("TER", _format_pct_points(row.get("expense_ratio_pct"))),
             ("AUM", _format_money(row.get("total_assets"))),
+            ("Volumen USD promedio", _format_money(row.get("average_dollar_volume"))),
             ("Alertas", str(row.get("red_flag_count", "n/a"))),
             ("Yahoo Finance", str(row.get("yahoo_finance_url", ""))),
             ("Emisor / factsheet", str(row.get("issuer_url", ""))),
@@ -2084,11 +2119,35 @@ def recommendation_style_class(recommendation: object, score: object | None = No
     return "approved"
 
 
+def _ranking_snapshot_cells(row: pd.Series) -> str:
+    """Render compact due diligence facts inside an executive ranking row."""
+
+    facts = [
+        ("Benchmark", row.get("benchmark_ticker", "n/a")),
+        ("CAGR", _format_pct(row.get("cagr"))),
+        ("Max DD", _format_pct(row.get("max_drawdown"))),
+        ("TER", _format_pct_points(row.get("expense_ratio_pct"))),
+        ("Vol. USD", _format_money(row.get("average_dollar_volume"))),
+        ("Alertas", str(row.get("red_flag_count", "n/a"))),
+    ]
+    cells = []
+    for label, value in facts:
+        cells.append(
+            f"""
+            <div class="ranking-dd-cell">
+                <div class="ranking-label">{escape(str(label))}</div>
+                <div class="ranking-value">{escape(str(value))}</div>
+            </div>
+            """
+        )
+    return "".join(cells)
+
+
 def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
     """Render complete ETF details vertically to avoid horizontal scrolling."""
 
     st.caption(
-        "Vista vertical por ETF para revisar benchmark, liquidez, costo y fuentes sin scroll lateral."
+        "Ficha complementaria por ETF para revisar benchmark, liquidez, costo y fuentes sin scroll lateral."
     )
     for _, row in ranking.iterrows():
         ticker = str(row.get("ticker", "")).upper()
@@ -2137,38 +2196,29 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
             f"""
             <div class="ranking-row {row_class}">
                 <div class="ranking-rank">{index + 1}</div>
-                <div>
-                    <div class="ranking-ticker">{escape(ticker)}</div>
-                    <div class="ranking-name">{escape(name)}</div>
+                <div class="ranking-dd-snapshot">
+                    <div>
+                        <div class="ranking-ticker">{escape(ticker)}</div>
+                        <div class="ranking-name">{escape(name)}</div>
+                    </div>
+                    <div class="ranking-dd-grid">
+                        {_ranking_snapshot_cells(row)}
+                    </div>
                 </div>
-                <div>
+                <div class="ranking-status">
                     <div class="ranking-label">Lectura</div>
                     <div class="ranking-value">
                         <span class="ranking-pill {row_class}">{escape(recommendation)}</span>
                     </div>
                 </div>
-                <div>
+                <div class="ranking-committee">
                     <div class="ranking-label">Comité</div>
                     <div class="ranking-value">{escape(committee)}</div>
                 </div>
-                <div>
+                <div class="ranking-score">
                     <div class="ranking-label">Score</div>
                     <div class="ranking-value">{score_value:.1f} / 100</div>
                     <div class="score-track"><div class="score-fill" style="width: {score_width:.1f}%"></div></div>
-                </div>
-                <div class="ranking-metrics">
-                    <div>
-                        <div class="ranking-label">CAGR</div>
-                        <div class="ranking-value">{escape(_format_pct(row.get("cagr")))}</div>
-                    </div>
-                    <div>
-                        <div class="ranking-label">Max DD</div>
-                        <div class="ranking-value">{escape(_format_pct(row.get("max_drawdown")))}</div>
-                    </div>
-                    <div>
-                        <div class="ranking-label">TER</div>
-                        <div class="ranking-value">{escape(_format_pct_points(row.get("expense_ratio_pct")))}</div>
-                    </div>
                 </div>
             </div>
             """
@@ -2681,6 +2731,7 @@ def main() -> None:
                 "top_10_concentration",
                 "expense_ratio_pct",
                 "total_assets",
+                "average_dollar_volume",
                 "red_flag_count",
                 "yahoo_finance_url",
                 "issuer_url",
@@ -2688,6 +2739,7 @@ def main() -> None:
             executive_columns = [
                 "ticker",
                 "name",
+                "benchmark_ticker",
                 "recommendation",
                 "committee_status",
                 "fund_selection_score",
@@ -2697,40 +2749,13 @@ def main() -> None:
                 "valuation_pe",
                 "top_10_concentration",
                 "expense_ratio_pct",
+                "average_dollar_volume",
                 "red_flag_count",
             ]
-            ranking_column_config = {
-                "ticker": st.column_config.TextColumn("Ticker"),
-                "name": st.column_config.TextColumn("Nombre"),
-                "asset_class": st.column_config.TextColumn("Clase de activo"),
-                "benchmark_ticker": st.column_config.TextColumn("Benchmark"),
-                "recommendation": st.column_config.TextColumn("Recomendación"),
-                "committee_status": st.column_config.TextColumn("Comité"),
-                "fund_selection_score": st.column_config.NumberColumn("Score", format="%.1f"),
-                "cagr": st.column_config.NumberColumn("CAGR", format="%.1%"),
-                "volatility": st.column_config.NumberColumn("Volatilidad", format="%.1%"),
-                "sharpe_ratio": st.column_config.NumberColumn("Sharpe", format="%.2f"),
-                "max_drawdown": st.column_config.NumberColumn("Max DD", format="%.1%"),
-                "tracking_error": st.column_config.NumberColumn("Tracking Error", format="%.1%"),
-                "alpha": st.column_config.NumberColumn("Alpha", format="%.1%"),
-                "valuation_pe": st.column_config.NumberColumn("P/E", format="%.1fx"),
-                "top_10_concentration": st.column_config.NumberColumn("Top 10", format="%.1%"),
-                "expense_ratio_pct": st.column_config.NumberColumn("TER", format="%.2f%%"),
-                "total_assets": st.column_config.NumberColumn("AUM", format="$%.0f"),
-                "red_flag_count": st.column_config.NumberColumn("Alertas", format="%d"),
-                "yahoo_finance_url": st.column_config.LinkColumn(
-                    "Yahoo Finance",
-                    display_text="Ver data",
-                ),
-                "issuer_url": st.column_config.LinkColumn(
-                    "Emisor / factsheet",
-                    display_text="Ver fuente",
-                ),
-            }
             render_section_heading("Tabla Ejecutiva de Ranking")
             render_executive_ranking(filtered[executive_columns])
 
-            with st.expander("Ver tabla completa con benchmark, liquidez y fuentes"):
+            with st.expander("Ver ficha completa por ETF con benchmark, liquidez y fuentes"):
                 render_vertical_ranking_details(filtered[ranking_columns])
 
             if not red_flags.empty:
