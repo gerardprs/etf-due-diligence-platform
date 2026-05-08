@@ -1887,6 +1887,58 @@ def render_ticker_risk_status(ticker: str, red_flags: pd.DataFrame) -> None:
     )
 
 
+def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
+    """Build a two-column detail table for one ETF."""
+
+    return pd.DataFrame(
+        [
+            ("Ticker", str(row.get("ticker", "n/a"))),
+            ("Nombre", str(row.get("name", "n/a"))),
+            ("Clase de activo", str(row.get("asset_class", "n/a"))),
+            ("Benchmark asignado", str(row.get("benchmark_ticker", "n/a"))),
+            ("Recomendación", str(row.get("recommendation", "n/a"))),
+            ("Estado comité", str(row.get("committee_status", "n/a"))),
+            ("Score", _score_text(row.get("fund_selection_score"))),
+            ("CAGR", _format_pct(row.get("cagr"))),
+            ("Volatilidad", _format_pct(row.get("volatility"))),
+            ("Sharpe", f"{pd.to_numeric(row.get('sharpe_ratio'), errors='coerce'):.2f}"),
+            ("Max Drawdown", _format_pct(row.get("max_drawdown"))),
+            ("Tracking Error", _format_pct(row.get("tracking_error"))),
+            ("Alpha", _format_pct(row.get("alpha"))),
+            ("P/E", _format_multiple(row.get("valuation_pe"))),
+            ("Top 10 Concentration", _format_pct(row.get("top_10_concentration"))),
+            ("TER", _format_pct_points(row.get("expense_ratio_pct"))),
+            ("AUM", _format_money(row.get("total_assets"))),
+            ("Alertas", str(row.get("red_flag_count", "n/a"))),
+            ("Yahoo Finance", str(row.get("yahoo_finance_url", ""))),
+            ("Emisor / factsheet", str(row.get("issuer_url", ""))),
+        ],
+        columns=["Campo", "Valor"],
+    )
+
+
+def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
+    """Render complete ETF details vertically to avoid horizontal scrolling."""
+
+    st.caption(
+        "Vista vertical por ETF para revisar benchmark, liquidez, costo y fuentes sin scroll lateral."
+    )
+    for _, row in ranking.iterrows():
+        ticker = str(row.get("ticker", "")).upper()
+        score = _score_text(row.get("fund_selection_score"))
+        recommendation = str(row.get("recommendation", "n/a"))
+        with st.expander(f"{ticker} | {recommendation} | Score {score}", expanded=False):
+            st.dataframe(
+                vertical_ranking_detail_table(row),
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "Campo": st.column_config.TextColumn("Campo", width="medium"),
+                    "Valor": st.column_config.TextColumn("Valor", width="large"),
+                },
+            )
+
+
 def render_intro(compact: bool = False) -> None:
     """Render the public-facing framing before the analytics workflow."""
 
@@ -2468,12 +2520,7 @@ def main() -> None:
             )
 
             with st.expander("Ver tabla completa con benchmark, liquidez y fuentes"):
-                st.dataframe(
-                    filtered[ranking_columns],
-                    hide_index=True,
-                    width="stretch",
-                    column_config=ranking_column_config,
-                )
+                render_vertical_ranking_details(filtered[ranking_columns])
 
             render_section_heading("Alertas")
             if red_flags.empty:
