@@ -974,8 +974,9 @@ def score_bar_chart(analysis: pd.DataFrame) -> go.Figure:
             hovertemplate="<b>%{y}</b><br>Score: %{x:.1f}<extra></extra>",
         )
     )
+    chart_height = max(360, min(560, 92 * len(ordered) + 90))
     fig.update_layout(
-        height=340,
+        height=chart_height,
         margin=dict(l=20, r=20, t=10, b=20),
         xaxis=dict(range=[0, 100], title="Fund Selection Score"),
         yaxis=dict(title=""),
@@ -2207,12 +2208,6 @@ def render_analysis_rail(
         unsafe_allow_html=True,
     )
 
-    memo_ticker = st.selectbox(
-        "ETF para análisis/memo",
-        options=scope_tickers,
-        index=0,
-        key="rail_focus_ticker",
-    )
     if st.button("Retroceder y ajustar selección", width="stretch", key="rail_adjust_selection"):
         st.session_state["analysis_ready"] = False
         st.session_state["analysis_scroll_reset"] = False
@@ -2237,7 +2232,7 @@ def render_analysis_rail(
             """
         )
 
-    return memo_ticker
+    return ticker
 
 
 def main() -> None:
@@ -2328,6 +2323,7 @@ def main() -> None:
 
     with output_col:
         render_result_headline(config, top, len(analysis_scope), leader_red_flags)
+        st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
         render_score_audit(top)
 
         tab_overview, tab_detail, tab_memo = st.tabs(
@@ -2335,7 +2331,7 @@ def main() -> None:
         )
 
         with tab_overview:
-            left, right = st.columns([0.95, 1.25])
+            left, right = st.columns([1, 1])
             with left:
                 render_section_heading("Ranking de Selección")
                 st.plotly_chart(score_bar_chart(filtered), width="stretch")
@@ -2390,13 +2386,13 @@ def main() -> None:
                         chart_start,
                         chart_end,
                     )
-                    st.caption(
-                        "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
-                        "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
-                    )
                     st.plotly_chart(
                         cumulative_chart(rebased_cumulative, selected_tickers, benchmark_map),
                         width="stretch",
+                    )
+                    st.caption(
+                        "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
+                        "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
                     )
 
             ranking_columns = [
