@@ -2239,9 +2239,8 @@ def render_intro(compact: bool = False) -> None:
             </div>
             <div class="hero-title">ETF Due Diligence Automation Platform</div>
             <div class="hero-copy">
-                Herramienta de investment analytics en Python que replica el primer filtro de un fund selector:
-                define mandato, compara peer group, evalúa benchmark fit, riesgo de pérdida, liquidez, costo,
-                concentración y genera un memo preliminar para comité. Proyecto educativo, no recomendación de inversión.
+                Automatiza un screening preliminar de ETFs: mandato, peer group, benchmark por fondo,
+                score, alertas y memo ejecutivo. Proyecto educativo, no recomendación de inversión.
             </div>
         </div>
         """,
@@ -2282,17 +2281,12 @@ def render_intro(compact: bool = False) -> None:
     with st.expander("Ver workflow automatizado"):
         st.markdown(
             """
-            La herramienta automatiza tareas que un analyst haría manualmente:
+            1. Selecciona mandato y peer group.
+            2. Asigna benchmark por ETF.
+            3. Calcula riesgo, performance, costo y liquidez.
+            4. Prioriza shortlist, alertas y memo preliminar.
 
-            1. Definir el mandato de inversión.
-            2. Construir un peer group comparable.
-            3. Asignar benchmark por ETF.
-            4. Calcular métricas de performance, riesgo, benchmark fit, liquidez y costo.
-            5. Detectar red flags cuantitativas.
-            6. Convertir el output en shortlist, estado para comité y memo preliminar.
-
-            **Valor operativo:** reduce un flujo repetitivo de Excel a una revisión reproducible,
-            auditable y consistente entre mandatos.
+            **Valor operativo:** convierte un screening repetitivo de Excel en un flujo reproducible.
             """
         )
 
@@ -2302,15 +2296,14 @@ def render_intro(compact: bool = False) -> None:
     with st.expander("Ver fuente de datos y disclaimer"):
         st.markdown(
             """
-            La app combina **dos fuentes públicas** y una capa local de estabilidad:
+            La app usa fuentes públicas y una capa local de estabilidad:
 
             - **Yahoo Finance vía `yfinance`:** precios históricos, retornos, volumen, AUM y metadata disponible.
-            - **Alpha Vantage ETF Profile:** respaldo para holdings, concentración, expense ratio y campos que Yahoo no siempre entrega.
-            - **Snapshot local:** evita que la demo falle por límites o caídas temporales de APIs públicas.
+            - **Alpha Vantage ETF Profile:** respaldo para holdings y metadata faltante.
+            - **Snapshot local:** evita fallas por límites temporales de APIs públicas.
 
-            También se incluyen links a **Yahoo Finance** y, cuando está mapeado, a la **página oficial del emisor / factsheet**. En un workflow real, el analyst validaría expense ratio, AUM, benchmark, holdings y metodología contra la fuente oficial del emisor.
-
-            **No constituye recomendación de inversión.** Los resultados son educativos y deben complementarse con revisión cualitativa, suitability, impuestos, spreads, holdings, metodología del índice y aprobación del comité correspondiente.
+            En un flujo real, el analista validaría TER, AUM, benchmark y holdings contra el factsheet oficial.
+            **No constituye recomendación de inversión.**
             """
         )
 
@@ -2484,8 +2477,7 @@ def render_result_headline(
         <div class="result-panel">
             <div class="result-title">Resultado ejecutivo del screening</div>
             <div class="result-copy">
-                La lectura de la izquierda resume el universo, líder y score. Esta zona se enfoca
-                en la conclusión ejecutiva y las validaciones que revisaría un PM.
+                Lectura rápida del universo: ETF líder, score, alertas y siguiente decisión.
             </div>
             <div class="result-copy"><strong>30-second read:</strong> {escape(takeaway)}</div>
         </div>
@@ -2513,8 +2505,7 @@ def render_analysis_rail(
             <div class="rail-kicker">ETF Due Diligence Automation</div>
             <div class="rail-title">Vista de decisión</div>
             <div class="rail-copy">
-                Flujo automatizado para convertir una lista de ETFs en ranking,
-                alertas y memo preliminar. No es recomendación de inversión.
+                Screening automatizado de ETFs para ranking, alertas y memo preliminar.
             </div>
             <div class="rail-divider"></div>
             <div class="rail-copy">
@@ -2553,27 +2544,6 @@ def render_analysis_rail(
         st.rerun()
 
     render_score_audit(top)
-
-    with st.expander("Metodología corta"):
-        st.markdown(
-            """
-            - **Performance:** CAGR y retorno ajustado por riesgo.
-            - **Riesgo:** Sortino, volatilidad, drawdown y CVaR.
-            - **Benchmark fit:** alpha, tracking error, R² e information ratio.
-            - **Liquidez:** AUM y volumen promedio en dólares.
-            - **Costo:** TER / expense ratio frente al peer group.
-            - **Penalizaciones:** red flags restan puntos al score final.
-            """
-        )
-
-    with st.expander("Fuentes y límites"):
-        st.markdown(
-            """
-            Usa snapshot local, Yahoo Finance vía `yfinance` y Alpha Vantage como respaldo
-            para holdings o metadata faltante. En un flujo institucional, el analyst valida
-            holdings, TER, benchmark y metodología contra el factsheet del emisor.
-            """
-        )
 
     return ticker
 
@@ -2868,7 +2838,7 @@ def main() -> None:
                 memo_text = generate_due_diligence_memo(memo_ticker, analysis, red_flags)
             except Exception:
                 memo_text = bundle.memos.get(memo_ticker, "Memo no disponible para este ETF.")
-            with st.expander("Ver memo completo generado por reglas", expanded=True):
+            with st.expander("Ver memo completo generado por reglas", expanded=False):
                 st.markdown(memo_text)
 
 
