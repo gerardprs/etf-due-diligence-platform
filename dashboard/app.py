@@ -2396,51 +2396,48 @@ def main() -> None:
         )
 
         with tab_overview:
-            left, right = st.columns([1, 1])
-            with left:
-                render_section_heading("Ranking de Selección")
-                st.plotly_chart(score_bar_chart(filtered), width="stretch")
+            render_section_heading("Ranking de Selección")
+            st.plotly_chart(score_bar_chart(filtered), width="stretch")
 
-            with right:
-                render_section_heading("Comparación de Performance")
-                comparison_columns = resolve_comparison_columns(
-                    selected_tickers,
-                    benchmark_map,
-                    cumulative.columns,
+            render_section_heading("Comparación de Performance")
+            comparison_columns = resolve_comparison_columns(
+                selected_tickers,
+                benchmark_map,
+                cumulative.columns,
+            )
+            comparison_base = cumulative[comparison_columns].dropna(how="all")
+
+            if comparison_base.empty:
+                st.warning("No hay datos suficientes para graficar la comparación.")
+            else:
+                min_chart_date = pd.Timestamp(comparison_base.index.min())
+                max_chart_date = pd.Timestamp(comparison_base.index.max())
+                default_range = (min_chart_date.date(), max_chart_date.date())
+                range_key = f"overview_date_range_{config['mandate_label']}"
+                chart_start, chart_end = st.session_state.get(range_key, default_range)
+
+                rebased_cumulative = rebase_cumulative_window(
+                    cumulative,
+                    comparison_columns,
+                    chart_start,
+                    chart_end,
                 )
-                comparison_base = cumulative[comparison_columns].dropna(how="all")
-
-                if comparison_base.empty:
-                    st.warning("No hay datos suficientes para graficar la comparación.")
-                else:
-                    min_chart_date = pd.Timestamp(comparison_base.index.min())
-                    max_chart_date = pd.Timestamp(comparison_base.index.max())
-                    default_range = (min_chart_date.date(), max_chart_date.date())
-                    range_key = f"overview_date_range_{config['mandate_label']}"
-                    chart_start, chart_end = st.session_state.get(range_key, default_range)
-
-                    rebased_cumulative = rebase_cumulative_window(
-                        cumulative,
-                        comparison_columns,
-                        chart_start,
-                        chart_end,
-                    )
-                    st.plotly_chart(
-                        cumulative_chart(rebased_cumulative, selected_tickers, benchmark_map),
-                        width="stretch",
-                    )
-                    st.caption(
-                        "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
-                        "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
-                    )
-                    st.slider(
-                        "Rango de fechas del gráfico",
-                        min_value=min_chart_date.date(),
-                        max_value=max_chart_date.date(),
-                        value=(chart_start, chart_end),
-                        format="YYYY-MM-DD",
-                        key=range_key,
-                    )
+                st.plotly_chart(
+                    cumulative_chart(rebased_cumulative, selected_tickers, benchmark_map),
+                    width="stretch",
+                )
+                st.caption(
+                    "Las curvas se rebajan a 0% al inicio del periodo seleccionado. "
+                    "En mandatos muy similares, como US Large Cap Core, es normal que las líneas se vean casi iguales."
+                )
+                st.slider(
+                    "Rango de fechas del gráfico",
+                    min_value=min_chart_date.date(),
+                    max_value=max_chart_date.date(),
+                    value=(chart_start, chart_end),
+                    format="YYYY-MM-DD",
+                    key=range_key,
+                )
 
             ranking_columns = [
                 "ticker",
