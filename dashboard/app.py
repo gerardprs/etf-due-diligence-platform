@@ -2109,10 +2109,7 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
             """
         )
 
-    st.markdown(
-        f'<div class="executive-ranking">{"".join(rows)}</div>',
-        unsafe_allow_html=True,
-    )
+    st.html(f'<div class="executive-ranking">{"".join(rows)}</div>')
 
 
 def render_intro(compact: bool = False) -> None:
