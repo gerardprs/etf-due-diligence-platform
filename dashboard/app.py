@@ -2239,7 +2239,7 @@ def main() -> None:
     st.set_page_config(
         page_title="Plataforma de Selección de ETFs",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="collapsed",
     )
     apply_theme()
     st.session_state.setdefault("analysis_ready", False)
