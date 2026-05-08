@@ -2268,10 +2268,6 @@ def render_analysis_rail(
             <div class="rail-takeaway">
                 <strong>30-second read:</strong> {escape(takeaway)}
             </div>
-            <div class="rail-note">
-                Primero mira el ETF líder y sus alertas. Luego revisa benchmark fit,
-                drawdown, concentración y fuentes oficiales.
-            </div>
         </div>
         """,
         unsafe_allow_html=True,
