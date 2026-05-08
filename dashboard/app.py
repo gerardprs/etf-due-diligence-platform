@@ -614,9 +614,10 @@ def apply_theme() -> None:
             padding: 0.78rem 0.86rem;
             box-shadow: 0 8px 22px rgba(24, 49, 63, 0.05);
         }
-        .ranking-row.watch {
-            border-left-color: var(--gold);
-        }
+        .ranking-row.preferred { border-left-color: var(--teal); }
+        .ranking-row.approved { border-left-color: var(--navy); }
+        .ranking-row.watch { border-left-color: var(--gold); }
+        .ranking-row.reject { border-left-color: var(--red); }
         .ranking-rank {
             width: 30px;
             height: 30px;
@@ -664,10 +665,10 @@ def apply_theme() -> None:
             font-size: 0.76rem;
             font-weight: 760;
         }
-        .ranking-pill.watch {
-            background: var(--gold-soft);
-            color: var(--gold);
-        }
+        .ranking-pill.preferred { background: var(--teal-soft); color: var(--teal); }
+        .ranking-pill.approved { background: #e8eef3; color: var(--navy); }
+        .ranking-pill.watch { background: var(--gold-soft); color: var(--gold); }
+        .ranking-pill.reject { background: var(--red-soft); color: var(--red); }
         .score-track {
             width: 100%;
             height: 8px;
@@ -681,13 +682,42 @@ def apply_theme() -> None:
             background: var(--teal);
             border-radius: 999px;
         }
-        .ranking-row.watch .score-fill {
-            background: var(--gold);
-        }
+        .ranking-row.preferred .score-fill { background: var(--teal); }
+        .ranking-row.approved .score-fill { background: var(--navy); }
+        .ranking-row.watch .score-fill { background: var(--gold); }
+        .ranking-row.reject .score-fill { background: var(--red); }
         .ranking-metrics {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.35rem;
+        }
+        .ranking-detail-card {
+            background: #fbfcfd;
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.85rem 0.95rem;
+            margin: 0.25rem 0 0.65rem 0;
+        }
+        .ranking-detail-card.approved { border-left-color: var(--navy); }
+        .ranking-detail-card.watch { border-left-color: var(--gold); }
+        .ranking-detail-card.reject { border-left-color: var(--red); }
+        .ranking-detail-title {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 780;
+            margin-bottom: 0.65rem;
+        }
+        .ranking-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+        .ranking-detail-cell {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0.62rem 0.68rem;
         }
         @media (max-width: 1100px) {
             .ranking-row {
@@ -695,6 +725,9 @@ def apply_theme() -> None:
             }
             .ranking-metrics {
                 grid-column: 2 / -1;
+            }
+            .ranking-detail-grid {
+                grid-template-columns: 1fr;
             }
         }
         section[data-testid="stSidebar"] {
@@ -2031,6 +2064,26 @@ def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
     )
 
 
+def recommendation_style_class(recommendation: object, score: object | None = None) -> str:
+    """Map recommendation text into a visual status class."""
+
+    recommendation_text = str(recommendation)
+    score_value = pd.to_numeric(score, errors="coerce")
+    if recommendation_text == "Preferido":
+        return "preferred"
+    if recommendation_text == "Aprobado":
+        return "approved"
+    if recommendation_text == "En observación":
+        return "watch"
+    if recommendation_text == "No prioritario":
+        return "reject"
+    if pd.notna(score_value) and float(score_value) < 50:
+        return "reject"
+    if pd.notna(score_value) and float(score_value) < 70:
+        return "watch"
+    return "approved"
+
+
 def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
     """Render complete ETF details vertically to avoid horizontal scrolling."""
 
@@ -2041,15 +2094,28 @@ def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
         ticker = str(row.get("ticker", "")).upper()
         score = _score_text(row.get("fund_selection_score"))
         recommendation = str(row.get("recommendation", "n/a"))
+        style_class = recommendation_style_class(
+            recommendation,
+            row.get("fund_selection_score"),
+        )
         with st.expander(f"{ticker} | {recommendation} | Score {score}", expanded=False):
-            st.dataframe(
-                vertical_ranking_detail_table(row),
-                hide_index=True,
-                width="stretch",
-                column_config={
-                    "Campo": st.column_config.TextColumn("Campo", width="medium"),
-                    "Valor": st.column_config.TextColumn("Valor", width="large"),
-                },
+            detail_cells = []
+            for field, value in vertical_ranking_detail_table(row).itertuples(index=False):
+                detail_cells.append(
+                    f"""
+                    <div class="ranking-detail-cell">
+                        <div class="ranking-label">{escape(str(field))}</div>
+                        <div class="ranking-value">{escape(str(value))}</div>
+                    </div>
+                    """
+                )
+            st.html(
+                f"""
+                <div class="ranking-detail-card {style_class}">
+                    <div class="ranking-detail-title">{escape(ticker)} - detalle de due diligence</div>
+                    <div class="ranking-detail-grid">{''.join(detail_cells)}</div>
+                </div>
+                """
             )
 
 
@@ -2066,8 +2132,7 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
         score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
         score_value = 0.0 if pd.isna(score) else float(score)
         score_width = min(max(score_value, 0.0), 100.0)
-        row_class = "watch" if recommendation == "En observación" or score_value < 70 else ""
-        pill_class = "watch" if row_class else ""
+        row_class = recommendation_style_class(recommendation, score_value)
         rows.append(
             f"""
             <div class="ranking-row {row_class}">
@@ -2079,7 +2144,7 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
                 <div>
                     <div class="ranking-label">Lectura</div>
                     <div class="ranking-value">
-                        <span class="ranking-pill {pill_class}">{escape(recommendation)}</span>
+                        <span class="ranking-pill {row_class}">{escape(recommendation)}</span>
                     </div>
                 </div>
                 <div>
