@@ -597,6 +597,106 @@ def apply_theme() -> None:
             overflow: hidden;
             box-shadow: 0 6px 18px rgba(24, 49, 63, 0.04);
         }
+        .executive-ranking {
+            display: grid;
+            gap: 0.7rem;
+            margin: 0.45rem 0 0.9rem 0;
+        }
+        .ranking-row {
+            display: grid;
+            grid-template-columns: 42px minmax(180px, 1.25fr) minmax(130px, 0.75fr) minmax(160px, 1fr) minmax(130px, 0.75fr) minmax(170px, 0.95fr);
+            gap: 0.8rem;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 8px;
+            padding: 0.78rem 0.86rem;
+            box-shadow: 0 8px 22px rgba(24, 49, 63, 0.05);
+        }
+        .ranking-row.watch {
+            border-left-color: var(--gold);
+        }
+        .ranking-rank {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ink);
+            font-size: 0.78rem;
+            font-weight: 780;
+        }
+        .ranking-ticker {
+            color: var(--ink);
+            font-size: 1.02rem;
+            font-weight: 780;
+            line-height: 1.2;
+        }
+        .ranking-name {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.32;
+            margin-top: 0.12rem;
+        }
+        .ranking-label {
+            color: var(--muted);
+            font-size: 0.68rem;
+            font-weight: 760;
+            text-transform: uppercase;
+        }
+        .ranking-value {
+            color: var(--ink);
+            font-size: 0.86rem;
+            font-weight: 680;
+            line-height: 1.28;
+            margin-top: 0.16rem;
+        }
+        .ranking-pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.2rem 0.5rem;
+            background: var(--teal-soft);
+            color: var(--teal);
+            font-size: 0.76rem;
+            font-weight: 760;
+        }
+        .ranking-pill.watch {
+            background: var(--gold-soft);
+            color: var(--gold);
+        }
+        .score-track {
+            width: 100%;
+            height: 8px;
+            background: var(--surface-2);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 0.34rem;
+        }
+        .score-fill {
+            height: 100%;
+            background: var(--teal);
+            border-radius: 999px;
+        }
+        .ranking-row.watch .score-fill {
+            background: var(--gold);
+        }
+        .ranking-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.35rem;
+        }
+        @media (max-width: 1100px) {
+            .ranking-row {
+                grid-template-columns: 38px minmax(160px, 1fr);
+            }
+            .ranking-metrics {
+                grid-column: 2 / -1;
+            }
+        }
         section[data-testid="stSidebar"] {
             background: #eef1f4;
             border-right: 1px solid var(--line);
@@ -1953,6 +2053,68 @@ def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
             )
 
 
+def render_executive_ranking(ranking: pd.DataFrame) -> None:
+    """Render a polished executive ranking without horizontal table scroll."""
+
+    rows: list[str] = []
+    ordered = ranking.reset_index(drop=True)
+    for index, row in ordered.iterrows():
+        ticker = str(row.get("ticker", "")).upper()
+        name = str(row.get("name", ticker))
+        recommendation = str(row.get("recommendation", "n/a"))
+        committee = str(row.get("committee_status", "n/a"))
+        score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
+        score_value = 0.0 if pd.isna(score) else float(score)
+        score_width = min(max(score_value, 0.0), 100.0)
+        row_class = "watch" if recommendation == "En observación" or score_value < 70 else ""
+        pill_class = "watch" if row_class else ""
+        rows.append(
+            f"""
+            <div class="ranking-row {row_class}">
+                <div class="ranking-rank">{index + 1}</div>
+                <div>
+                    <div class="ranking-ticker">{escape(ticker)}</div>
+                    <div class="ranking-name">{escape(name)}</div>
+                </div>
+                <div>
+                    <div class="ranking-label">Lectura</div>
+                    <div class="ranking-value">
+                        <span class="ranking-pill {pill_class}">{escape(recommendation)}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="ranking-label">Comité</div>
+                    <div class="ranking-value">{escape(committee)}</div>
+                </div>
+                <div>
+                    <div class="ranking-label">Score</div>
+                    <div class="ranking-value">{score_value:.1f} / 100</div>
+                    <div class="score-track"><div class="score-fill" style="width: {score_width:.1f}%"></div></div>
+                </div>
+                <div class="ranking-metrics">
+                    <div>
+                        <div class="ranking-label">CAGR</div>
+                        <div class="ranking-value">{escape(_format_pct(row.get("cagr")))}</div>
+                    </div>
+                    <div>
+                        <div class="ranking-label">Max DD</div>
+                        <div class="ranking-value">{escape(_format_pct(row.get("max_drawdown")))}</div>
+                    </div>
+                    <div>
+                        <div class="ranking-label">TER</div>
+                        <div class="ranking-value">{escape(_format_pct_points(row.get("expense_ratio_pct")))}</div>
+                    </div>
+                </div>
+            </div>
+            """
+        )
+
+    st.markdown(
+        f'<div class="executive-ranking">{"".join(rows)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_intro(compact: bool = False) -> None:
     """Render the public-facing framing before the analytics workflow."""
 
@@ -2504,20 +2666,13 @@ def main() -> None:
                 ),
             }
             render_section_heading("Tabla Ejecutiva de Ranking")
-            st.dataframe(
-                filtered[executive_columns],
-                hide_index=True,
-                width="stretch",
-                column_config=ranking_column_config,
-            )
+            render_executive_ranking(filtered[executive_columns])
 
             with st.expander("Ver tabla completa con benchmark, liquidez y fuentes"):
                 render_vertical_ranking_details(filtered[ranking_columns])
 
-            render_section_heading("Alertas")
-            if red_flags.empty:
-                st.success("No se detectaron alertas.")
-            else:
+            if not red_flags.empty:
+                render_section_heading("Alertas")
                 st.dataframe(
                     red_flags,
                     hide_index=True,
