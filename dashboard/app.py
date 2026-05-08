@@ -743,6 +743,20 @@ def apply_theme() -> None:
             line-height: 1.35;
             margin-top: 0.55rem;
         }
+        .rail-takeaway {
+            background: #fbfcfd;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--teal);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.36;
+            margin-top: 0.65rem;
+            padding: 0.68rem 0.72rem;
+        }
+        .rail-takeaway strong {
+            color: var(--ink);
+        }
         div[data-testid="column"]:has(.rail-panel) {
             position: sticky;
             top: 1.1rem;
@@ -2218,6 +2232,7 @@ def render_analysis_rail(
     score = _score_text(top.get("fund_selection_score"))
     recommendation = str(top.get("recommendation", "n/a"))
     selected = ", ".join(scope_tickers)
+    takeaway = build_leader_takeaway(top, leader_red_flags)
     st.markdown(
         f"""
         <div class="rail-panel">
@@ -2253,6 +2268,9 @@ def render_analysis_rail(
             <div class="rail-note">
                 Primero mira el ETF líder y sus alertas. Luego revisa benchmark fit,
                 drawdown, concentración y fuentes oficiales.
+            </div>
+            <div class="rail-takeaway">
+                <strong>30-second read:</strong> {escape(takeaway)}
             </div>
         </div>
         """,
@@ -2375,8 +2393,6 @@ def main() -> None:
         memo_ticker = render_analysis_rail(config, top, leader_red_flags, scope_tickers)
 
     with output_col:
-        render_result_headline(config, top, len(analysis_scope), leader_red_flags)
-        st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
         render_score_audit(top)
 
         tab_overview, tab_detail, tab_memo = st.tabs(
