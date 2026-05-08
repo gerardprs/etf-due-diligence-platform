@@ -1,4 +1,4 @@
-"""Benchmark-fit analytics for ETF/fund selection."""
+"""Métricas de ajuste contra benchmark para selección de ETFs y fondos."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from .performance import TRADING_DAYS_PER_YEAR, _as_numeric_frame
 
 
 def _safe_beta(fund_returns: pd.Series, benchmark_returns: pd.Series) -> float:
-    """Calculate beta with guardrails for short or zero-variance samples."""
+    """Calcula beta evitando muestras cortas o varianza cero."""
 
     aligned = pd.concat([fund_returns, benchmark_returns], axis=1).dropna()
     if aligned.shape[0] < 30:
@@ -27,7 +27,7 @@ def benchmark_summary(
     risk_free_rate: float = 0.0,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.DataFrame:
-    """Calculate benchmark comparison metrics for every fund in the universe."""
+    """Calcula métricas relativas al benchmark para cada fondo del universo."""
 
     clean_returns = _as_numeric_frame(returns)
     rows: list[dict[str, float | str]] = []

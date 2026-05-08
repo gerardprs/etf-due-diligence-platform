@@ -1,4 +1,4 @@
-"""Liquidity and cost checks for ETF/fund screening."""
+"""Revisión de liquidez y costo para el screening de ETFs y fondos."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ import pandas as pd
 
 
 def normalize_expense_ratio(raw_value: object) -> float:
-    """Normalize vendor expense ratio into percentage points.
+    """Normaliza el expense ratio del proveedor a puntos porcentuales.
 
-    Yahoo may return ETF expense ratios either as percentage points (0.03 means
-    0.03%) or as decimals in some contexts (0.0003 means 0.03%). This guardrail
-    keeps the dashboard interpretable without assuming all vendors are clean.
+    Yahoo puede devolver el costo como porcentaje (0.03 significa 0.03%) o como
+    decimal (0.0003 significa 0.03%). Esta normalización evita comparar costos
+    con escalas mezcladas.
     """
 
     value = pd.to_numeric(raw_value, errors="coerce")
@@ -23,7 +23,7 @@ def normalize_expense_ratio(raw_value: object) -> float:
 
 
 def liquidity_cost_summary(metadata: pd.DataFrame) -> pd.DataFrame:
-    """Create fund-level liquidity and fee metrics from vendor metadata."""
+    """Crea métricas de liquidez y costo a partir de la metadata disponible."""
 
     if metadata.empty:
         return pd.DataFrame(

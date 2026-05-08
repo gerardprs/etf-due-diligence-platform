@@ -1,4 +1,4 @@
-"""Explainable Fund Selection Score."""
+"""Score explicable para priorizar la selección de fondos."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def _score_series(
     higher_is_better: bool = True,
     missing_score: float = 35.0,
 ) -> pd.Series:
-    """Convert a metric into a 0-100 cross-sectional score."""
+    """Convierte una métrica en un score transversal de 0 a 100."""
 
     numeric = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
     score = pd.Series(missing_score, index=values.index, dtype=float)
@@ -44,7 +44,7 @@ def _score_series(
 
 
 def _log_score(values: pd.Series, higher_is_better: bool = True) -> pd.Series:
-    """Score scale-sensitive fields such as AUM and dollar volume."""
+    """Puntúa variables de escala como AUM y volumen en dólares."""
 
     numeric = pd.to_numeric(values, errors="coerce")
     transformed = np.log10(numeric.where(numeric > 0))
@@ -52,7 +52,7 @@ def _log_score(values: pd.Series, higher_is_better: bool = True) -> pd.Series:
 
 
 def calculate_component_scores(analysis: pd.DataFrame) -> pd.DataFrame:
-    """Calculate transparent component scores used by the final ranking."""
+    """Calcula los componentes usados por el ranking final."""
 
     scored = analysis.copy()
 
@@ -88,7 +88,7 @@ def calculate_component_scores(analysis: pd.DataFrame) -> pd.DataFrame:
 
 
 def recommendation_from_score(score: float) -> str:
-    """Translate final score into an investment-office style status."""
+    """Traduce el score final a una lectura simple."""
 
     if pd.isna(score):
         return "Requiere revisión"
@@ -102,11 +102,11 @@ def recommendation_from_score(score: float) -> str:
 
 
 def committee_status_from_row(row: pd.Series) -> str:
-    """Translate score and flags into a next-step workflow status.
+    """Traduce score y alertas en un siguiente paso de revisión.
 
-    The score is useful for ranking, but an analyst still needs a plain-language
-    output: which funds deserve review, which stay in the watchlist, and which
-    are not worth prioritizing without a qualitative reason.
+    El score ordena fondos, pero la app también necesita una salida legible:
+    cuáles se revisan primero, cuáles quedan en watchlist y cuáles no se
+    priorizan salvo que exista una razón cualitativa.
     """
 
     score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
@@ -131,7 +131,7 @@ def score_funds(
     red_flags: pd.DataFrame,
     weights: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    """Build final Fund Selection Score after red-flag penalties."""
+    """Construye el score final después de penalizaciones por alertas."""
 
     score_weights = {**DEFAULT_SCORE_WEIGHTS, **(weights or {})}
     total_weight = sum(score_weights.values())

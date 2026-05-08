@@ -1,4 +1,4 @@
-"""End-to-end analysis pipeline for the ETF/fund selection platform."""
+"""Pipeline de análisis para la plataforma de selección de ETFs."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from .scoring import score_funds
 
 @dataclass(frozen=True)
 class SelectionAnalysisBundle:
-    """Container for all user-facing analytics outputs."""
+    """Agrupa las salidas principales del análisis."""
 
     analysis: pd.DataFrame
     red_flags: pd.DataFrame
@@ -28,7 +28,7 @@ class SelectionAnalysisBundle:
 
 
 def load_processed_data(processed_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load validated universe, returns, and metadata from `data/processed`."""
+    """Carga universo validado, retornos y metadata desde `data/processed`."""
 
     directory = Path(processed_dir)
     universe = pd.read_csv(directory / "fund_universe_validated.csv")
@@ -49,7 +49,7 @@ def build_selection_analysis(
     metadata: pd.DataFrame,
     risk_free_rate: float = 0.0,
 ) -> SelectionAnalysisBundle:
-    """Run the full fund selection analytics workflow."""
+    """Ejecuta el flujo completo de análisis de selección."""
 
     fund_tickers = universe["ticker"].astype(str).str.upper().tolist()
     available_funds = [ticker for ticker in fund_tickers if ticker in returns.columns]
@@ -90,7 +90,7 @@ def build_selection_analysis_from_processed(
     processed_dir: str | Path,
     risk_free_rate: float = 0.0,
 ) -> SelectionAnalysisBundle:
-    """Load processed files and run the full selection analysis."""
+    """Carga archivos procesados y ejecuta el análisis completo."""
 
     universe, returns, metadata = load_processed_data(processed_dir)
     return build_selection_analysis(

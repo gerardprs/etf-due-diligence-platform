@@ -1,4 +1,4 @@
-"""Optional Alpha Vantage ETF profile fallback with local caching."""
+"""Respaldo opcional de perfiles ETF de Alpha Vantage con caché local."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _numeric(value: Any) -> float:
 
 
 def _normalize_weight(value: Any) -> float:
-    """Normalize a holding weight into decimal form."""
+    """Convierte el peso de un holding a formato decimal."""
 
     numeric = _numeric(value)
     if pd.isna(numeric):
@@ -41,10 +41,10 @@ def fetch_etf_profile(
     project_root: str | Path,
     force_refresh: bool = False,
 ) -> dict[str, Any] | None:
-    """Fetch one ETF profile from Alpha Vantage or local cache.
+    """Obtiene el perfil de un ETF desde Alpha Vantage o desde caché local.
 
-    The cache prevents unnecessary API usage. This matters because free API keys
-    have tight daily limits.
+    La caché evita llamadas innecesarias a la API, especialmente cuando se usa
+    una llave gratuita con límite diario bajo.
     """
 
     clean_ticker = ticker.upper()
@@ -80,7 +80,7 @@ def fetch_etf_profile(
 
 
 def parse_etf_profile(profile: dict[str, Any]) -> dict[str, Any]:
-    """Extract fields useful for the due diligence dashboard."""
+    """Extrae campos útiles para el dashboard de revisión."""
 
     holdings = profile.get("holdings") or profile.get("Holdings") or []
     top_10_weights: list[float] = []
@@ -130,10 +130,10 @@ def enrich_metadata_with_alpha_vantage(
     project_root: str | Path,
     max_api_requests: int = 3,
 ) -> pd.DataFrame:
-    """Fill selected missing ETF metadata using Alpha Vantage.
+    """Completa metadata faltante de ETFs usando Alpha Vantage.
 
-    Only uncached tickers count against `max_api_requests`. Cached profiles can
-    be reused freely.
+    Solo los tickers sin caché consumen el límite de `max_api_requests`.
+    Los perfiles ya guardados se reutilizan sin nuevas solicitudes.
     """
 
     if metadata.empty:

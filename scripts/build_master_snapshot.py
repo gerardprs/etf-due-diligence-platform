@@ -1,4 +1,4 @@
-"""Build a stable local snapshot for the curated ETF universe."""
+"""Construye un snapshot local estable para el universo curado de ETFs."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from fund_selection.data_loader import (  # noqa: E402
 
 
 def build_master_universe() -> pd.DataFrame:
-    """Create a long-form table of curated ETFs and assigned benchmarks."""
+    """Crea una tabla base con ETFs curados y benchmarks asignados."""
 
     rows: list[dict[str, str]] = []
     for mandate, preset in MANDATE_PRESETS.items():
@@ -46,7 +46,7 @@ def build_master_universe() -> pd.DataFrame:
 
 
 def main() -> None:
-    """Download prices, returns, and metadata for every curated ETF/benchmark."""
+    """Descarga precios, retornos y metadata para cada ETF y benchmark curado."""
 
     raw_dir = ROOT / "data" / "raw"
     processed_dir = ROOT / "data" / "processed"
@@ -80,12 +80,12 @@ def main() -> None:
     ) as file:
         json.dump(quality_report.missing_ratio_by_ticker, file, indent=2)
 
-    print("Master snapshot created successfully.")
-    print(f"Curated fund entries: {len(universe)}")
-    print(f"Unique requested tickers: {len(all_tickers)}")
-    print(f"Available tickers: {len(quality_report.available_tickers)}")
-    print(f"Missing tickers: {', '.join(quality_report.missing_tickers) or 'None'}")
-    print(f"Output directory: {processed_dir}")
+    print("Snapshot maestro creado correctamente.")
+    print(f"Fondos curados: {len(universe)}")
+    print(f"Tickers solicitados únicos: {len(all_tickers)}")
+    print(f"Tickers disponibles: {len(quality_report.available_tickers)}")
+    print(f"Tickers faltantes: {', '.join(quality_report.missing_tickers) or 'Ninguno'}")
+    print(f"Carpeta de salida: {processed_dir}")
 
 
 if __name__ == "__main__":

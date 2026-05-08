@@ -1,4 +1,4 @@
-"""Local configuration helpers for optional data providers."""
+"""Configuración local para proveedores de datos opcionales."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from pathlib import Path
 
 
 def get_alpha_vantage_api_key(project_root: str | Path | None = None) -> str | None:
-    """Return Alpha Vantage API key from env vars or Streamlit secrets.
+    """Obtiene la API key de Alpha Vantage desde variables de entorno o secrets.
 
-    Search order:
-        1. Environment variable `ALPHA_VANTAGE_API_KEY`.
-        2. Local `.streamlit/secrets.toml` file.
+    Orden de búsqueda:
+        1. Variable de entorno `ALPHA_VANTAGE_API_KEY`.
+        2. Archivo local `.streamlit/secrets.toml`.
 
-    The key should never be committed to Git or written into README files.
+    La llave no debe subirse a Git ni escribirse en archivos públicos.
     """
 
     env_value = os.getenv("ALPHA_VANTAGE_API_KEY")

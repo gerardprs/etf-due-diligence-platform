@@ -1,4 +1,4 @@
-"""Run the full ETF/fund selection analytics workflow."""
+"""Ejecuta el flujo completo de análisis y selección de ETFs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from fund_selection.pipeline import build_selection_analysis_from_processed  # n
 
 
 def main() -> None:
-    """Create ranked analysis, red flags, and preliminary memos."""
+    """Genera ranking, alertas y memos preliminares."""
 
     processed_dir = ROOT / "data" / "processed"
     output_dir = ROOT / "outputs"
@@ -41,11 +41,11 @@ def main() -> None:
     )
 
     top = bundle.analysis.iloc[0]
-    print("Full analysis completed.")
-    print(f"Funds analyzed: {len(bundle.analysis)}")
-    print(f"Top ranked fund: {top['ticker']} ({top['recommendation']})")
-    print(f"Top score: {top['fund_selection_score']:.1f}")
-    print(f"Output directory: {output_dir}")
+    print("Análisis completo finalizado.")
+    print(f"Fondos analizados: {len(bundle.analysis)}")
+    print(f"Fondo líder: {top['ticker']} ({top['recommendation']})")
+    print(f"Score líder: {top['fund_selection_score']:.1f}")
+    print(f"Carpeta de salida: {output_dir}")
 
 
 if __name__ == "__main__":

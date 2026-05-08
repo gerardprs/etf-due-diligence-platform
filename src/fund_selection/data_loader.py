@@ -1,10 +1,8 @@
-"""Data loading utilities for institutional ETF/fund screening.
+"""Carga y limpieza de datos para screening de ETFs y fondos.
 
-The data layer is intentionally defensive because public market-data APIs are
-not contractual data sources. Yahoo Finance can return partial histories,
-incomplete metadata, stale fields, or fail on individual tickers. Downstream
-portfolio analytics should receive clean matrices plus an explicit quality
-report instead of silently accepting bad inputs.
+La capa de datos es defensiva porque las APIs públicas pueden devolver series
+parciales, metadata incompleta o fallas por ticker. El resto del análisis recibe
+matrices limpias y un reporte explícito de calidad de datos.
 """
 
 from __future__ import annotations
@@ -33,18 +31,16 @@ REQUIRED_UNIVERSE_COLUMNS = {
 
 @dataclass(frozen=True)
 class DataQualityReport:
-    """Compact audit trail for the downloaded data set.
+    """Resumen de calidad del set descargado.
 
-    Attributes:
-        requested_tickers: Funds and benchmarks requested from the data vendor.
-        available_tickers: Tickers with at least one valid adjusted close price.
-        missing_tickers: Tickers requested but not returned with usable prices.
-        start_date: First available date after cleaning.
-        end_date: Last available date after cleaning.
-        observations: Number of rows in the cleaned price matrix.
-        missing_ratio_by_ticker: Share of missing observations per ticker after
-            aligning the history. High values often indicate an inception-date
-            mismatch, delisting, vendor issue, or unsuitable comparison window.
+    Campos:
+        requested_tickers: fondos y benchmarks solicitados.
+        available_tickers: tickers con al menos un precio válido.
+        missing_tickers: tickers solicitados sin precios utilizables.
+        start_date: primera fecha disponible después de limpieza.
+        end_date: última fecha disponible después de limpieza.
+        observations: cantidad de filas en la matriz de precios.
+        missing_ratio_by_ticker: porcentaje de datos faltantes por ticker.
     """
 
     requested_tickers: list[str]
@@ -56,7 +52,7 @@ class DataQualityReport:
     missing_ratio_by_ticker: dict[str, float]
 
     def to_frame(self) -> pd.DataFrame:
-        """Return the report as a two-column DataFrame for app/report display."""
+        """Devuelve el reporte en formato de dos columnas."""
 
         rows = {
             "requested_tickers": ", ".join(self.requested_tickers),
@@ -73,7 +69,7 @@ class DataQualityReport:
 
 @dataclass(frozen=True)
 class FundDataBundle:
-    """Validated fund universe plus market data for downstream analytics."""
+    """Universo validado y datos de mercado para el análisis."""
 
     universe: pd.DataFrame
     prices: pd.DataFrame
@@ -83,7 +79,7 @@ class FundDataBundle:
 
 
 def _clean_ticker(value: object) -> str:
-    """Normalize ticker symbols while preserving Yahoo suffixes such as `.L`."""
+    """Normaliza tickers conservando sufijos de Yahoo como `.L`."""
 
     if pd.isna(value):
         return ""
@@ -91,7 +87,7 @@ def _clean_ticker(value: object) -> str:
 
 
 def _unique_ordered(values: Iterable[str]) -> list[str]:
-    """Return non-empty unique values while preserving input order."""
+    """Devuelve valores únicos no vacíos preservando el orden original."""
 
     seen: set[str] = set()
     ordered: list[str] = []
@@ -104,13 +100,13 @@ def _unique_ordered(values: Iterable[str]) -> list[str]:
 
 
 def load_fund_universe(path: str | Path) -> pd.DataFrame:
-    """Load and validate the fund universe used by the screening platform.
+    """Carga y valida el universo de fondos usado por la plataforma.
 
-    Required columns:
+    Columnas requeridas:
         ticker, name, asset_class, benchmark_ticker
 
-    Optional columns are preserved because future modules will use them for
-    reporting, peer grouping, liquidity checks, and memo generation.
+    Las columnas opcionales se preservan para reportes, peer groups,
+    liquidez, costos y generación de memo.
     """
 
     csv_path = Path(path)
@@ -149,12 +145,11 @@ def download_price_history(
     price_field: str = "Close",
     auto_adjust: bool = True,
 ) -> pd.DataFrame:
-    """Download and normalize price history from Yahoo Finance.
+    """Descarga y normaliza precios históricos desde Yahoo Finance.
 
-    `auto_adjust=True` makes Yahoo return split/dividend-adjusted OHLC data. For
-    ETF/fund selection, adjusted prices are the right default because total
-    return comparability is materially better than raw close prices. Yahoo data
-    is still an approximation and should be disclosed as such in the final app.
+    `auto_adjust=True` ajusta precios por splits y dividendos. Para comparar
+    ETFs, esta base es más razonable que precios sin ajustar, aunque sigue
+    siendo data pública y debe validarse contra fuentes oficiales.
     """
 
     if yf is None:
@@ -211,7 +206,7 @@ def normalize_price_frame(
     requested_tickers: Iterable[str],
     price_field: str = "Close",
 ) -> pd.DataFrame:
-    """Convert a Yahoo Finance response into a clean date-by-ticker matrix."""
+    """Convierte una respuesta de Yahoo en matriz fecha por ticker."""
 
     tickers = _unique_ordered(requested_tickers)
     if raw_prices.empty:
@@ -253,11 +248,11 @@ def normalize_price_frame(
 
 
 def calculate_daily_returns(prices: pd.DataFrame) -> pd.DataFrame:
-    """Calculate simple daily returns from a clean price matrix.
+    """Calcula retornos simples diarios desde una matriz limpia de precios.
 
-    Simple returns are used because most institutional performance reporting,
-    attribution, and client-facing summaries communicate returns arithmetically.
-    Log returns can be added later for specific modeling tasks.
+    Se usan retornos simples porque son más directos para reportes de
+    performance y comparación. Los retornos logarítmicos pueden agregarse si
+    luego se necesita modelamiento específico.
     """
 
     if prices.empty:
@@ -271,7 +266,7 @@ def build_quality_report(
     requested_tickers: Iterable[str],
     prices: pd.DataFrame,
 ) -> DataQualityReport:
-    """Create a data-quality report for user-facing diagnostics."""
+    """Crea un reporte de calidad de datos para diagnóstico."""
 
     requested = _unique_ordered(requested_tickers)
     available = [ticker for ticker in requested if ticker in prices.columns]
@@ -300,13 +295,11 @@ def build_quality_report(
 
 
 def fetch_fund_metadata(tickers: Iterable[str]) -> pd.DataFrame:
-    """Fetch available descriptive ETF/fund metadata from Yahoo Finance.
+    """Obtiene metadata descriptiva disponible desde Yahoo Finance.
 
-    Yahoo metadata is inconsistent across ETFs, mutual funds, and regions. This
-    function therefore treats every field as optional and returns nulls instead
-    of failing the data pipeline. Later scoring modules should penalize or flag
-    missing cost/liquidity fields rather than assume zero cost or infinite
-    liquidity.
+    La metadata de Yahoo no siempre es consistente. Por eso cada campo se trata
+    como opcional y se devuelve nulo cuando falta, en vez de detener todo el
+    pipeline.
     """
 
     if yf is None:
@@ -393,7 +386,7 @@ def fetch_fund_metadata(tickers: Iterable[str]) -> pd.DataFrame:
 
 
 def serialize_top_holdings(top_holdings: pd.DataFrame, limit: int = 10) -> str | None:
-    """Serialize vendor top holdings into a stable JSON payload for snapshots."""
+    """Serializa holdings principales en JSON para snapshots locales."""
 
     if not isinstance(top_holdings, pd.DataFrame) or top_holdings.empty:
         return None
@@ -415,10 +408,10 @@ def serialize_top_holdings(top_holdings: pd.DataFrame, limit: int = 10) -> str |
 
 
 def fetch_top_holdings(ticker: str, limit: int = 10) -> pd.DataFrame:
-    """Fetch a display-ready Top Holdings table from Yahoo Finance.
+    """Obtiene una tabla de Top Holdings lista para mostrar.
 
-    This is used as an on-demand fallback when an older local snapshot has only
-    the Top 10 concentration percentage but not the underlying names.
+    Se usa como respaldo cuando el snapshot local tiene concentración Top 10
+    pero no incluye los nombres de las posiciones.
     """
 
     columns = ["symbol", "name", "weight"]
@@ -449,12 +442,11 @@ def fetch_top_holdings(ticker: str, limit: int = 10) -> pd.DataFrame:
 
 
 def _normalize_yahoo_valuation_ratio(raw_value: object) -> float:
-    """Normalize Yahoo ETF valuation fields into familiar valuation multiples.
+    """Normaliza métricas de valorización de Yahoo a múltiplos comparables.
 
-    Yahoo's `funds_data.equity_holdings` often exposes P/E and P/B as a decimal
-    yield-like value. For example, a value around 0.04 is more useful as an
-    earnings-yield proxy, so the comparable P/E multiple is approximately
-    `1 / 0.04 = 25x`. If Yahoo returns an already familiar multiple, keep it.
+    Algunas respuestas parecen venir como yield decimal. Si el valor es menor
+    a 1, se invierte para aproximar un múltiplo; si ya parece múltiplo, se
+    mantiene.
     """
 
     value = pd.to_numeric(raw_value, errors="coerce")
@@ -471,7 +463,7 @@ def build_data_snapshot(
     end: str | None = None,
     include_metadata: bool = True,
 ) -> FundDataBundle:
-    """Build the first reusable data object for the selection platform."""
+    """Construye el objeto base reutilizable para el análisis."""
 
     universe = load_fund_universe(universe_path)
     fund_tickers = universe["ticker"].tolist()

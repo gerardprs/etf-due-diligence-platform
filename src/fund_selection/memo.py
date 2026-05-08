@@ -1,4 +1,4 @@
-"""Preliminary due diligence memo generation."""
+"""Generación de memos preliminares de revisión."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def _number(value: object, decimals: int = 2) -> str:
 
 
 def _numeric(value: object) -> float:
-    """Return a float or NaN for robust memo conditionals."""
+    """Convierte un valor a float o NaN para reglas del memo."""
 
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -88,7 +88,7 @@ def _risks(row: pd.Series, ticker_flags: pd.DataFrame) -> list[str]:
 
 
 def _decision_view(row: pd.Series) -> str:
-    """Build a first-screening decision sentence."""
+    """Construye una lectura breve del primer filtro."""
 
     ticker = row.get("ticker")
     committee_status = row.get("committee_status", "Revisión manual requerida")
@@ -102,7 +102,7 @@ def _decision_view(row: pd.Series) -> str:
 
 
 def _committee_questions(row: pd.Series) -> list[str]:
-    """Generate qualitative checks that remain after quantitative screening."""
+    """Genera checks cualitativos pendientes después del filtro cuantitativo."""
 
     ticker = str(row.get("ticker", "")).upper()
     benchmark = row.get("benchmark_ticker", "benchmark asignado")
@@ -126,7 +126,7 @@ def generate_due_diligence_memo(
     scored_analysis: pd.DataFrame,
     red_flags: pd.DataFrame,
 ) -> str:
-    """Generate a concise preliminary due diligence memo for one fund."""
+    """Genera un memo preliminar para un fondo."""
 
     clean_ticker = ticker.upper()
     row_match = scored_analysis.loc[scored_analysis["ticker"] == clean_ticker]
@@ -198,7 +198,7 @@ Este memo automatiza la primera lectura que normalmente se haría en Excel: rank
 
 
 def generate_all_memos(scored_analysis: pd.DataFrame, red_flags: pd.DataFrame) -> dict[str, str]:
-    """Generate memos for every scored fund."""
+    """Genera memos para todos los fondos evaluados."""
 
     return {
         ticker: generate_due_diligence_memo(ticker, scored_analysis, red_flags)

@@ -1,4 +1,4 @@
-"""Create a local data snapshot for the ETF/fund selection platform."""
+"""Crea un snapshot local de datos para la plataforma de selección de ETFs."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from fund_selection import build_data_snapshot  # noqa: E402
 
 
 def main() -> None:
-    """Download, validate, and persist the initial market-data snapshot."""
+    """Descarga, valida y guarda el snapshot inicial de datos de mercado."""
 
     bundle = build_data_snapshot(
         universe_path=ROOT / "data" / "raw" / "fund_universe.csv",
@@ -39,11 +39,11 @@ def main() -> None:
     with (output_dir / "missing_ratio_by_ticker.json").open("w", encoding="utf-8") as file:
         json.dump(bundle.quality_report.missing_ratio_by_ticker, file, indent=2)
 
-    print("Data snapshot created successfully.")
-    print(f"Rows: {bundle.quality_report.observations}")
-    print(f"Available tickers: {', '.join(bundle.quality_report.available_tickers)}")
-    print(f"Missing tickers: {', '.join(bundle.quality_report.missing_tickers) or 'None'}")
-    print(f"Output directory: {output_dir}")
+    print("Snapshot de datos creado correctamente.")
+    print(f"Filas: {bundle.quality_report.observations}")
+    print(f"Tickers disponibles: {', '.join(bundle.quality_report.available_tickers)}")
+    print(f"Tickers faltantes: {', '.join(bundle.quality_report.missing_tickers) or 'Ninguno'}")
+    print(f"Carpeta de salida: {output_dir}")
 
 
 if __name__ == "__main__":

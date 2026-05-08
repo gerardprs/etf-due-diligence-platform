@@ -1,33 +1,38 @@
-# ETF & Fund Selection Platform for Portfolio Advisory
+# ETF Screening & Due Diligence Dashboard
 
-Institutional-style analytics platform for ETF and fund screening, built for wealth management, family office, asset management, and investment advisory workflows.
+Proyecto en Python y Streamlit para comparar ETFs dentro de un mandato de inversión y generar un primer filtro cuantitativo. La idea es simular una tarea real de un analista: revisar un peer group, comparar cada ETF contra su benchmark, detectar alertas básicas y dejar un memo preliminar para análisis posterior.
 
-## Portfolio Positioning
+No es una herramienta de recomendación de inversión. El resultado sirve para priorizar revisión.
 
-This project is designed to show investment judgement first and Python second. It automates the first-pass workflow a fund analyst would otherwise build manually in Excel: define the mandate, build a comparable peer group, assign benchmarks, calculate risk/return/liquidity/cost metrics, flag implementation risks, and produce a preliminary memo for PM review.
+## Qué problema resuelve
 
-**Core message for recruiters:** the candidate understands fund selection as an investment process, and uses Python automation to make that process faster, more consistent, and more auditable.
+Cuando se revisan varios ETFs en Excel, el proceso suele repetir los mismos pasos:
 
-## Objective
+- descargar precios y metadata;
+- validar que los tickers tengan datos suficientes;
+- calcular retornos, drawdowns y ratios de riesgo;
+- comparar cada ETF contra un benchmark razonable;
+- revisar costo, AUM, volumen y concentración;
+- ordenar candidatos y documentar la lectura.
 
-Create a Streamlit tool that supports preliminary ETF/fund due diligence by combining:
+Este proyecto automatiza ese flujo para que el análisis sea más rápido, consistente y fácil de auditar.
 
-- performance analytics;
-- risk metrics;
-- benchmark fit;
-- liquidity and cost checks;
-- red flag detection;
-- an explainable Fund Selection Score;
-- investment committee status;
-- a preliminary due diligence memo.
+## Flujo del proyecto
 
-This is not a price prediction project. The goal is to simulate the type of decision-support tool an investment analyst could use before recommending a fund to a portfolio manager, advisor, or investment committee.
+```text
+Universo de ETFs
+-> descarga o lectura de snapshot local
+-> validación de datos
+-> métricas de performance y riesgo
+-> comparación contra benchmark
+-> revisión de liquidez y costo
+-> alertas cuantitativas
+-> score de priorización
+-> memo preliminar
+-> dashboard en Streamlit
+```
 
-## Business Question
-
-> Which ETF or fund is suitable for a client portfolio, considering return quality, risk control, benchmark behavior, liquidity, cost efficiency, and implementation red flags?
-
-## Current Architecture
+## Estructura
 
 ```text
 .
@@ -35,15 +40,20 @@ This is not a price prediction project. The goal is to simulate the type of deci
 │   └── app.py
 ├── data/
 │   ├── raw/
+│   │   ├── etf_universe_master.csv
 │   │   └── fund_universe.csv
 │   └── processed/
-├── outputs/
-│   └── due_diligence_memos.md
+│       ├── prices_master.csv
+│       ├── daily_returns_master.csv
+│       ├── fund_metadata_master.csv
+│       └── master_data_quality_summary.csv
 ├── scripts/
+│   ├── build_master_snapshot.py
 │   ├── run_data_snapshot.py
 │   └── run_full_analysis.py
 ├── src/
 │   └── fund_selection/
+│       ├── alpha_vantage.py
 │       ├── benchmark.py
 │       ├── data_loader.py
 │       ├── liquidity_cost.py
@@ -57,50 +67,35 @@ This is not a price prediction project. The goal is to simulate the type of deci
 └── README.md
 ```
 
-## Workflow
+## Fuentes de datos
 
-```text
-Fund universe
-→ price and metadata download
-→ data quality checks
-→ performance and risk analytics
-→ benchmark comparison
-→ liquidity and cost review
-→ red flag detection
-→ Fund Selection Score
-→ due diligence memo
-→ Streamlit dashboard
-```
+El proyecto usa fuentes públicas:
 
-## Data Sources
+- `yfinance`: precios históricos, volumen y metadata disponible.
+- Alpha Vantage ETF Profile: respaldo para holdings o metadata faltante.
+- Snapshots locales en `data/processed`: evitan depender de la API en cada demo.
 
-The platform currently uses:
+La metadata pública puede venir incompleta. Cuando falta información, el modelo no asume que el ETF está bien; lo marca como punto de revisión.
 
-- `yfinance` for ETF prices, volume, AUM, expense ratio, category, exchange, and issuer metadata when available;
-- manually defined benchmark mapping in `data/raw/fund_universe.csv`;
-- internally calculated returns, risk metrics, tracking metrics, scores, and flags.
-
-Public vendor metadata can be incomplete. The pipeline treats missing metadata as a review item instead of silently assuming the fund is suitable.
-
-## Metrics
+## Métricas principales
 
 Performance:
 
-- total return;
+- retorno total;
 - CAGR;
-- annualized arithmetic return;
-- best/worst month;
-- positive months ratio.
+- retorno anualizado;
+- mejor y peor mes;
+- porcentaje de meses positivos.
 
-Risk:
+Riesgo:
 
-- annualized volatility;
+- volatilidad anualizada;
 - Sharpe ratio;
 - Sortino ratio;
 - downside deviation;
-- max drawdown;
-- historical VaR;
-- historical CVaR.
+- maximum drawdown;
+- VaR histórico;
+- CVaR histórico.
 
 Benchmark fit:
 
@@ -108,75 +103,86 @@ Benchmark fit:
 - alpha;
 - tracking error;
 - information ratio;
-- correlation;
-- R-squared;
-- annualized excess return.
+- correlación;
+- R²;
+- exceso de retorno anualizado.
 
-Implementation checks:
+Implementación:
 
-- expense ratio;
+- expense ratio / TER;
 - AUM;
-- average volume;
-- average dollar volume;
-- red flag penalties.
+- volumen promedio;
+- volumen promedio en dólares;
+- concentración Top 10;
+- penalizaciones por alertas.
 
-## Fund Selection Score
+## Score de priorización
 
-The score is explainable and component-based:
+El score combina cinco bloques:
 
 ```text
-Fund Selection Score =
-  Performance Score
-+ Risk Score
-+ Benchmark Fit Score
-+ Liquidity Score
-+ Cost Score
-- Red Flag Penalties
+Score de priorización =
+  25% Performance
++ 25% Riesgo
++ 20% Benchmark fit
++ 15% Liquidez
++ 15% Costo
+- Penalizaciones por alertas
 ```
 
-The dashboard currently presents one of four preliminary review statuses:
+El score no decide una compra. Solo ordena el universo para saber qué ETFs vale la pena revisar primero.
 
-- `Preferido`;
-- `Aprobado`;
-- `En observación`;
-- `No prioritario`.
+Lecturas usadas en el dashboard:
 
-## Run
+- `Preferido`: candidato fuerte dentro del peer group.
+- `Aprobado`: cumple razonablemente el filtro.
+- `En observación`: requiere revisión adicional.
+- `No prioritario`: no destaca frente al universo seleccionado.
 
-Install dependencies:
+## Cómo correrlo
+
+Instalar dependencias:
 
 ```powershell
 py -m pip install -r requirements.txt
 ```
 
-Create or refresh the data snapshot:
+Crear o actualizar el snapshot de datos:
 
 ```powershell
 py scripts\run_data_snapshot.py
 ```
 
-Run the full analytics workflow:
+Ejecutar el análisis completo:
 
 ```powershell
 py scripts\run_full_analysis.py
 ```
 
-Launch the dashboard:
+Abrir el dashboard:
 
 ```powershell
 py -m streamlit run dashboard\app.py
 ```
 
-## Portfolio Positioning
+## Qué muestra la app
 
-This project demonstrates a hybrid profile:
+- selección guiada de mandato y ETFs comparables;
+- benchmark asignado por ETF;
+- ranking de selección;
+- comparación de performance;
+- tabla ejecutiva;
+- análisis individual por ETF;
+- drawdown, concentración Top 10 y fuentes;
+- memo preliminar generado con reglas.
 
-- data analytics and automation;
-- Python-based investment analytics;
-- fund screening and benchmark comparison;
-- investment memo generation;
-- dashboard delivery for non-technical stakeholders.
+## Límites
 
-Interview framing:
+- No reemplaza Bloomberg, FactSet, Morningstar ni el factsheet oficial del emisor.
+- No evalúa impuestos, suitability, spreads en vivo ni disponibilidad UCITS/offshore.
+- No proyecta retornos futuros.
+- La data pública puede tener vacíos o retrasos.
 
-> I built a fund selection platform that automates preliminary ETF due diligence by combining performance, risk, benchmark fit, liquidity, cost, and red-flag checks into an explainable score and an investment-style memo.
+## Cómo lo explicaría en una entrevista
+
+Construí una herramienta de investment analytics que automatiza el primer filtro de ETFs. El proyecto toma un universo comparable, asigna benchmarks por ETF, calcula métricas de performance, riesgo, benchmark fit, liquidez y costo, detecta alertas y genera un memo preliminar. La parte de Python replica un proceso que normalmente se haría en Excel, pero de forma más trazable y reutilizable.

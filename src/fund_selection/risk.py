@@ -1,8 +1,8 @@
-"""Risk metrics for ETF/fund screening.
+"""Métricas de riesgo para screening de ETFs y fondos.
 
-The implementation favors transparent, interview-defensible metrics used in
-fund due diligence: volatility, downside deviation, Sharpe, Sortino, drawdown,
-historical VaR, and CVaR. These are descriptive risk measures, not forecasts.
+Se priorizan métricas descriptivas y fáciles de defender: volatilidad,
+downside deviation, Sharpe, Sortino, drawdown, VaR histórico y CVaR. No son
+pronósticos; resumen el riesgo observado en la ventana analizada.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ def annualized_volatility(
     returns: pd.DataFrame,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate annualized sample volatility."""
+    """Calcula la volatilidad anualizada de la muestra."""
 
     clean_returns = _as_numeric_frame(returns)
     return clean_returns.std(skipna=True, ddof=1) * np.sqrt(periods_per_year)
@@ -28,7 +28,7 @@ def downside_deviation(
     minimum_acceptable_return: float = 0.0,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate annualized downside deviation relative to a daily target."""
+    """Calcula downside deviation anualizada frente a un retorno objetivo."""
 
     clean_returns = _as_numeric_frame(returns)
     daily_target = minimum_acceptable_return / periods_per_year
@@ -41,7 +41,7 @@ def sharpe_ratio(
     risk_free_rate: float = 0.0,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate annualized Sharpe ratio using daily excess returns."""
+    """Calcula Sharpe anualizado usando retornos diarios en exceso."""
 
     clean_returns = _as_numeric_frame(returns)
     daily_rf = risk_free_rate / periods_per_year
@@ -56,7 +56,7 @@ def sortino_ratio(
     minimum_acceptable_return: float = 0.0,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate annualized Sortino ratio."""
+    """Calcula el ratio Sortino anualizado."""
 
     clean_returns = _as_numeric_frame(returns)
     daily_mar = minimum_acceptable_return / periods_per_year
@@ -70,7 +70,7 @@ def sortino_ratio(
 
 
 def drawdown_series(returns: pd.DataFrame) -> pd.DataFrame:
-    """Calculate drawdown path from daily returns."""
+    """Calcula la serie de drawdown desde retornos diarios."""
 
     clean_returns = _as_numeric_frame(returns)
     wealth_index = (1.0 + clean_returns.fillna(0.0)).cumprod()
@@ -79,7 +79,7 @@ def drawdown_series(returns: pd.DataFrame) -> pd.DataFrame:
 
 
 def max_drawdown(returns: pd.DataFrame) -> pd.Series:
-    """Calculate maximum drawdown per ticker."""
+    """Calcula el máximo drawdown por ticker."""
 
     return drawdown_series(returns).min(skipna=True)
 
@@ -88,7 +88,7 @@ def historical_var(
     returns: pd.DataFrame,
     confidence_level: float = 0.95,
 ) -> pd.Series:
-    """Calculate historical Value at Risk as a positive loss number."""
+    """Calcula VaR histórico como pérdida positiva."""
 
     clean_returns = _as_numeric_frame(returns)
     tail_quantile = clean_returns.quantile(1.0 - confidence_level, interpolation="linear")
@@ -99,7 +99,7 @@ def historical_cvar(
     returns: pd.DataFrame,
     confidence_level: float = 0.95,
 ) -> pd.Series:
-    """Calculate historical Conditional VaR as average loss beyond VaR."""
+    """Calcula CVaR histórico como pérdida promedio más allá del VaR."""
 
     clean_returns = _as_numeric_frame(returns)
     var_threshold = clean_returns.quantile(1.0 - confidence_level, interpolation="linear")
@@ -115,7 +115,7 @@ def rolling_volatility(
     window: int = 63,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.DataFrame:
-    """Calculate rolling annualized volatility."""
+    """Calcula volatilidad anualizada móvil."""
 
     clean_returns = _as_numeric_frame(returns)
     return clean_returns.rolling(window=window, min_periods=window).std(ddof=1) * np.sqrt(
@@ -129,7 +129,7 @@ def rolling_sharpe(
     risk_free_rate: float = 0.0,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.DataFrame:
-    """Calculate rolling annualized Sharpe ratio."""
+    """Calcula Sharpe anualizado móvil."""
 
     clean_returns = _as_numeric_frame(returns)
     daily_rf = risk_free_rate / periods_per_year
@@ -147,7 +147,7 @@ def risk_summary(
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
     confidence_level: float = 0.95,
 ) -> pd.DataFrame:
-    """Build a ticker-level risk table."""
+    """Construye una tabla de riesgo por ticker."""
 
     clean_returns = _as_numeric_frame(returns)
     summary = pd.DataFrame(index=clean_returns.columns)

@@ -1,8 +1,8 @@
-"""Performance analytics for ETF/fund due diligence.
+"""Métricas de performance para revisión de ETFs y fondos.
 
-These functions use daily simple returns as the base unit because that format is
-compatible with institutional reporting, benchmark comparison, and attribution.
-All annualized metrics assume 252 trading days unless stated otherwise.
+Las funciones usan retornos simples diarios como base porque son fáciles de
+leer en reportes de performance y comparación contra benchmark. Las métricas
+anualizadas asumen 252 ruedas bursátiles salvo que se indique otro valor.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ TRADING_DAYS_PER_YEAR = 252
 
 
 def _as_numeric_frame(data: pd.DataFrame) -> pd.DataFrame:
-    """Return a numeric DataFrame sorted by date when a datetime index exists."""
+    """Devuelve un DataFrame numérico ordenado por fecha."""
 
     frame = data.copy()
     if not isinstance(frame.index, pd.DatetimeIndex):
@@ -25,14 +25,14 @@ def _as_numeric_frame(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def cumulative_returns(returns: pd.DataFrame) -> pd.DataFrame:
-    """Calculate cumulative returns from daily simple returns."""
+    """Calcula retornos acumulados desde retornos simples diarios."""
 
     clean_returns = _as_numeric_frame(returns)
     return (1.0 + clean_returns.fillna(0.0)).cumprod() - 1.0
 
 
 def total_return(returns: pd.DataFrame) -> pd.Series:
-    """Calculate full-period compounded return per ticker."""
+    """Calcula el retorno compuesto del periodo por ticker."""
 
     clean_returns = _as_numeric_frame(returns)
     return (1.0 + clean_returns).prod(skipna=True) - 1.0
@@ -42,11 +42,10 @@ def cagr(
     returns: pd.DataFrame,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate compound annual growth rate per ticker.
+    """Calcula el crecimiento anual compuesto por ticker.
 
-    CAGR annualizes the realized compounded growth path. It is preferred over
-    arithmetic annualized return for manager/fund comparison because it reflects
-    the investor's actual end-to-end capital growth over the sample.
+    El CAGR anualiza la trayectoria compuesta realizada. Es útil para comparar
+    fondos porque refleja el crecimiento de capital de inicio a fin del periodo.
     """
 
     clean_returns = _as_numeric_frame(returns)
@@ -63,14 +62,14 @@ def annualized_arithmetic_return(
     returns: pd.DataFrame,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.Series:
-    """Calculate arithmetic annualized return from daily returns."""
+    """Calcula el retorno anualizado aritmético desde retornos diarios."""
 
     clean_returns = _as_numeric_frame(returns)
     return clean_returns.mean(skipna=True) * periods_per_year
 
 
 def monthly_returns(returns: pd.DataFrame) -> pd.DataFrame:
-    """Compound daily returns into calendar-month returns."""
+    """Compone retornos diarios en retornos mensuales calendario."""
 
     clean_returns = _as_numeric_frame(returns)
     return (1.0 + clean_returns).resample("ME").prod(min_count=1) - 1.0
@@ -80,7 +79,7 @@ def performance_summary(
     returns: pd.DataFrame,
     periods_per_year: int = TRADING_DAYS_PER_YEAR,
 ) -> pd.DataFrame:
-    """Build a ticker-level performance table."""
+    """Construye una tabla de performance por ticker."""
 
     clean_returns = _as_numeric_frame(returns)
     monthly = monthly_returns(clean_returns)

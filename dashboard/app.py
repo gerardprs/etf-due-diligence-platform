@@ -244,7 +244,7 @@ def load_dashboard_data(risk_free_rate: float):
 
 
 def parse_tickers(ticker_text: str, max_tickers: int = 10) -> list[str]:
-    """Parse a comma/space separated ETF list for custom screening."""
+    """Convierte una lista de tickers separada por comas o espacios."""
 
     normalized = ticker_text.replace("\n", ",").replace(";", ",").replace(" ", ",")
     tickers: list[str] = []
@@ -265,7 +265,7 @@ def build_from_master_snapshot(
     required_tickers: list[str],
     risk_free_rate: float,
 ):
-    """Use the predownloaded curated universe when all required data is present."""
+    """Usa el universo curado predescargado cuando la data está disponible."""
 
     returns_path = PROCESSED_DIR / "daily_returns_master.csv"
     metadata_path = PROCESSED_DIR / "fund_metadata_master.csv"
@@ -304,7 +304,7 @@ def load_custom_dashboard_data(
     risk_free_rate: float,
     start_date: str,
 ):
-    """Build the full due diligence pipeline for a selected mandate."""
+    """Construye el análisis completo para el mandato seleccionado."""
 
     preset = MANDATE_PRESETS[mandate_label]
     tickers = parse_tickers(ticker_text, max_tickers=10)
@@ -1220,7 +1220,7 @@ def resolve_comparison_columns(
     benchmark_map: dict[str, str],
     available_columns: pd.Index,
 ) -> list[str]:
-    """Return selected ETFs plus their benchmarks, preserving a clean order."""
+    """Devuelve ETFs seleccionados y benchmarks, preservando el orden."""
 
     columns: list[str] = []
     for ticker in selected_tickers:
@@ -1242,7 +1242,7 @@ def date_window_from_preset(
     min_date: pd.Timestamp,
     max_date: pd.Timestamp,
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
-    """Resolve a chart date preset into a valid data window."""
+    """Convierte un preset de fechas en una ventana válida."""
 
     if preset == "YTD":
         start = pd.Timestamp(year=max_date.year, month=1, day=1)
@@ -1262,11 +1262,10 @@ def rebase_cumulative_window(
     start_date: object,
     end_date: object,
 ) -> pd.DataFrame:
-    """Filter a cumulative-return matrix and reset each series to 0% at start.
+    """Filtra retornos acumulados y rebasa cada serie a 0% al inicio.
 
-    This is the correct display treatment for date-window analysis. If we only
-    sliced the original cumulative return path, each line would still include
-    performance from before the selected start date.
+    En un gráfico por periodo seleccionado, la comparación debe empezar desde
+    cero. Si solo se recorta la serie original, se arrastra performance previa.
     """
 
     start = pd.Timestamp(start_date)
@@ -1325,7 +1324,7 @@ def top_10_concentration_chart(
     row: pd.Series,
     holdings_table: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """Render a donut chart breaking out the five largest holdings."""
+    """Crea una dona con los cinco holdings principales."""
 
     concentration = pd.to_numeric(row.get("top_10_concentration"), errors="coerce")
     if holdings_table is not None and not holdings_table.empty:
@@ -1410,7 +1409,7 @@ def top_10_concentration_chart(
 
 
 def parse_serialized_holdings(value: object) -> pd.DataFrame:
-    """Parse a stored Top 10 holdings payload into a table."""
+    """Convierte el payload guardado de Top 10 holdings en tabla."""
 
     columns = ["symbol", "name", "weight"]
     if value is None:
@@ -1443,7 +1442,7 @@ def parse_serialized_holdings(value: object) -> pd.DataFrame:
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_top_holdings_table(ticker: str, serialized_holdings: object) -> pd.DataFrame:
-    """Load Top 10 holdings from local payload, with Yahoo as a selected-ETF fallback."""
+    """Carga holdings desde payload local y usa Yahoo como respaldo puntual."""
 
     table = parse_serialized_holdings(serialized_holdings)
     if table.empty:
@@ -1480,7 +1479,7 @@ def metric_table(row: pd.Series) -> pd.DataFrame:
 
 
 def enrich_with_source_links(analysis: pd.DataFrame) -> pd.DataFrame:
-    """Add source URLs for recruiter-friendly verification."""
+    """Agrega URLs de fuente para verificación rápida."""
 
     enriched = analysis.copy()
     enriched["yahoo_finance_url"] = enriched["ticker"].map(
@@ -1493,7 +1492,7 @@ def enrich_with_source_links(analysis: pd.DataFrame) -> pd.DataFrame:
 
 
 def ensure_dashboard_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
-    """Ensure optional dashboard columns exist even when cached data is older."""
+    """Asegura columnas opcionales aunque el caché sea antiguo."""
 
     output = frame.copy()
     for column in columns:
@@ -1503,7 +1502,7 @@ def ensure_dashboard_columns(frame: pd.DataFrame, columns: list[str]) -> pd.Data
 
 
 def ensure_committee_status(frame: pd.DataFrame) -> pd.DataFrame:
-    """Backfill committee status when Streamlit serves an older cached analysis."""
+    """Completa el siguiente paso cuando Streamlit usa un análisis cacheado."""
 
     output = frame.copy()
     if "committee_status" not in output.columns:
@@ -1518,7 +1517,7 @@ def ensure_committee_status(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def local_committee_status_from_row(row: pd.Series) -> str:
-    """Local fallback for next-step status in deployed dashboards."""
+    """Respaldo local para calcular el siguiente paso."""
 
     score = pd.to_numeric(row.get("fund_selection_score"), errors="coerce")
     red_flag_count = pd.to_numeric(row.get("red_flag_count"), errors="coerce")
@@ -1538,7 +1537,7 @@ def local_committee_status_from_row(row: pd.Series) -> str:
 
 
 def scroll_to_top_once(flag_name: str) -> None:
-    """Reset scroll position once after a major workflow transition."""
+    """Reinicia el scroll una vez después de cambiar de etapa."""
 
     if st.session_state.get(flag_name):
         return
@@ -1560,7 +1559,7 @@ def scroll_to_top_once(flag_name: str) -> None:
 
 
 def render_section_heading(title: str) -> None:
-    """Render a compact institutional section heading."""
+    """Muestra un título compacto de sección."""
 
     st.markdown(
         f'<div class="section-heading">{escape(title)}</div>',
@@ -1574,7 +1573,7 @@ def render_kpi_card(
     helper: str = "",
     accent: str = "teal",
 ) -> None:
-    """Render an executive KPI card with a controlled accent color."""
+    """Muestra una tarjeta KPI con color de acento controlado."""
 
     allowed_accents = {"teal", "gold", "red", "slate"}
     accent_class = accent if accent in allowed_accents else "teal"
@@ -1594,7 +1593,7 @@ def render_kpi_card(
 
 
 def recommendation_accent(value: object) -> str:
-    """Map the recommendation label into an executive-card accent."""
+    """Convierte la recomendación en color de acento."""
 
     recommendation = str(value)
     if recommendation == "Preferido":
@@ -1607,7 +1606,7 @@ def recommendation_accent(value: object) -> str:
 
 
 def _numeric_value(value: object) -> float:
-    """Convert dashboard values to float while keeping NaN explicit."""
+    """Convierte valores del dashboard a float manteniendo NaN."""
 
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -1616,7 +1615,7 @@ def _numeric_value(value: object) -> float:
 
 
 def mandate_fit_label(row: pd.Series) -> tuple[str, str]:
-    """Summarize whether the ETF behaves like the exposure it is meant to fill."""
+    """Resume si el ETF cumple la exposición buscada."""
 
     tracking_error = _numeric_value(row.get("tracking_error"))
     r_squared = _numeric_value(row.get("r_squared"))
@@ -1628,7 +1627,7 @@ def mandate_fit_label(row: pd.Series) -> tuple[str, str]:
 
 
 def implementation_label(row: pd.Series) -> tuple[str, str]:
-    """Summarize execution quality through scale, liquidity and cost."""
+    """Resume calidad de implementación usando escala, liquidez y costo."""
 
     assets = _numeric_value(row.get("total_assets"))
     dollar_volume = _numeric_value(row.get("average_dollar_volume"))
@@ -1643,7 +1642,7 @@ def implementation_label(row: pd.Series) -> tuple[str, str]:
 
 
 def concentration_label(row: pd.Series) -> tuple[str, str]:
-    """Summarize issuer concentration risk for the selected ETF."""
+    """Resume riesgo de concentración del ETF seleccionado."""
 
     top_10 = _numeric_value(row.get("top_10_concentration"))
     if pd.isna(top_10):
@@ -1656,7 +1655,7 @@ def concentration_label(row: pd.Series) -> tuple[str, str]:
 
 
 def render_ic_brief(row: pd.Series) -> None:
-    """Render a compact decision brief above the detailed analytics."""
+    """Muestra una lectura compacta antes del detalle."""
 
     mandate_label, mandate_note = mandate_fit_label(row)
     implementation, implementation_note = implementation_label(row)
@@ -1696,7 +1695,7 @@ def render_ic_brief(row: pd.Series) -> None:
 
 
 def render_pm_checklist(row: pd.Series) -> None:
-    """Show the qualitative checks a real analyst would complete after screening."""
+    """Muestra checks cualitativos pendientes después del screening."""
 
     ticker = str(row.get("ticker", "")).upper()
     benchmark = str(row.get("benchmark_ticker", "benchmark asignado"))
@@ -1717,7 +1716,7 @@ def render_pm_checklist(row: pd.Series) -> None:
 
 
 def render_memo_decision_summary(row: pd.Series) -> None:
-    """Render the memo's preliminary screening decision before the full text."""
+    """Muestra la lectura preliminar antes del texto completo del memo."""
 
     ticker = str(row.get("ticker", "")).upper()
     score = _score_text(row.get("fund_selection_score"))
@@ -1776,7 +1775,7 @@ def render_memo_decision_summary(row: pd.Series) -> None:
 
 
 def render_external_link(label: str, url: object) -> None:
-    """Render an external link that works reliably in embedded browsers."""
+    """Muestra un enlace externo compatible con navegadores embebidos."""
 
     if pd.isna(url) or not str(url).strip():
         st.caption("Fuente oficial no mapeada para este ETF.")
@@ -1793,7 +1792,7 @@ def render_external_link(label: str, url: object) -> None:
 
 
 def render_score_explanation() -> None:
-    """Explain the Fund Selection Score in recruiter-friendly language."""
+    """Explica el score de priorización de forma breve."""
 
     st.subheader("Cómo se interpreta el score de priorización")
     st.markdown(
@@ -1942,7 +1941,7 @@ def render_score_explanation() -> None:
 
 
 def render_score_methodology_summary() -> None:
-    """Render a concise, recruiter-friendly score explanation."""
+    """Muestra un resumen corto de la metodología del score."""
 
     st.markdown(
         """
@@ -1967,7 +1966,7 @@ def render_score_methodology_summary() -> None:
 
 
 def score_audit_table(row: pd.Series) -> pd.DataFrame:
-    """Build a transparent score contribution table for one ETF."""
+    """Construye una tabla de contribución al score para un ETF."""
 
     rows = [
         ("Performance", 0.25, row.get("performance_score")),
@@ -1986,7 +1985,7 @@ def score_audit_table(row: pd.Series) -> pd.DataFrame:
 
 
 def render_score_audit(row: pd.Series) -> None:
-    """Render the hidden score calculation audit for an analyst reviewer."""
+    """Muestra la auditoría del cálculo del score."""
 
     with st.expander("Ver auditoría del cálculo del score"):
         st.markdown(
@@ -2015,7 +2014,7 @@ def render_score_audit(row: pd.Series) -> None:
 
 
 def render_etf_description(row: pd.Series) -> None:
-    """Render a compact ETF identity block below the selector."""
+    """Muestra una ficha corta del ETF seleccionado."""
 
     ticker = str(row.get("ticker", "")).upper()
     name = row.get("name")
@@ -2041,7 +2040,7 @@ def render_etf_description(row: pd.Series) -> None:
 
 
 def render_ticker_risk_status(ticker: str, red_flags: pd.DataFrame) -> None:
-    """Show a compact risk-status block for one ETF."""
+    """Muestra el estado de riesgo de un ETF."""
 
     ticker_flags = red_flags.loc[red_flags["ticker"] == ticker] if not red_flags.empty else red_flags
     if ticker_flags.empty:
@@ -2069,7 +2068,7 @@ def render_ticker_risk_status(ticker: str, red_flags: pd.DataFrame) -> None:
 
 
 def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
-    """Build a two-column detail table for one ETF."""
+    """Construye una tabla vertical de detalle para un ETF."""
 
     return pd.DataFrame(
         [
@@ -2100,7 +2099,7 @@ def vertical_ranking_detail_table(row: pd.Series) -> pd.DataFrame:
 
 
 def recommendation_style_class(recommendation: object, score: object | None = None) -> str:
-    """Map recommendation text into a visual status class."""
+    """Convierte la recomendación en una clase visual."""
 
     recommendation_text = str(recommendation)
     score_value = pd.to_numeric(score, errors="coerce")
@@ -2120,7 +2119,7 @@ def recommendation_style_class(recommendation: object, score: object | None = No
 
 
 def _ranking_snapshot_cells(row: pd.Series) -> str:
-    """Render compact due diligence facts inside an executive ranking row."""
+    """Muestra datos clave dentro de una fila del ranking."""
 
     facts = [
         ("Benchmark", row.get("benchmark_ticker", "n/a")),
@@ -2144,7 +2143,7 @@ def _ranking_snapshot_cells(row: pd.Series) -> str:
 
 
 def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
-    """Render complete ETF details vertically to avoid horizontal scrolling."""
+    """Muestra detalles por ETF en formato vertical."""
 
     st.caption(
         "Ficha complementaria por ETF para revisar benchmark, liquidez, costo y fuentes sin scroll lateral."
@@ -2179,7 +2178,7 @@ def render_vertical_ranking_details(ranking: pd.DataFrame) -> None:
 
 
 def render_executive_ranking(ranking: pd.DataFrame) -> None:
-    """Render a polished executive ranking without horizontal table scroll."""
+    """Muestra el ranking ejecutivo sin scroll horizontal."""
 
     rows: list[str] = []
     ordered = ranking.reset_index(drop=True)
@@ -2228,7 +2227,7 @@ def render_executive_ranking(ranking: pd.DataFrame) -> None:
 
 
 def render_intro(compact: bool = False) -> None:
-    """Render the public-facing framing before the analytics workflow."""
+    """Muestra la introducción antes del flujo de análisis."""
 
     st.markdown(
         """
@@ -2310,7 +2309,7 @@ def render_intro(compact: bool = False) -> None:
 
 
 def render_screening_controls() -> tuple[str, list[str]]:
-    """Render the guided ETF screening controls in the main page."""
+    """Muestra controles guiados para seleccionar el universo."""
 
     render_section_heading("Configura una demo rápida")
     st.markdown(
@@ -2380,7 +2379,7 @@ def render_screening_controls() -> tuple[str, list[str]]:
 
 
 def setup_step(risk_free_rate: float, start_date: str) -> None:
-    """Render the configuration step and store the selected analysis universe."""
+    """Muestra la configuración y guarda el universo seleccionado."""
 
     mandate_label, selected_tickers = render_screening_controls()
 
@@ -2410,7 +2409,7 @@ def setup_step(risk_free_rate: float, start_date: str) -> None:
 
 
 def render_analysis_header(config: dict[str, object]) -> None:
-    """Show a compact summary of the selected universe with navigation."""
+    """Muestra un resumen compacto del universo seleccionado."""
 
     left, right = st.columns([0.72, 0.28])
     with left:
@@ -2434,7 +2433,7 @@ def render_analysis_header(config: dict[str, object]) -> None:
 
 
 def _score_text(value: object) -> str:
-    """Format a score value for compact executive UI."""
+    """Formatea un score para la interfaz."""
 
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -2443,7 +2442,7 @@ def _score_text(value: object) -> str:
 
 
 def build_leader_takeaway(row: pd.Series, leader_red_flags: int) -> str:
-    """Build a one-sentence, recruiter-friendly decision takeaway."""
+    """Construye una lectura breve del ETF líder."""
 
     ticker = str(row.get("ticker", "")).upper()
     recommendation = str(row.get("recommendation", ""))
@@ -2470,7 +2469,7 @@ def render_result_headline(
     scope_count: int,
     leader_red_flags: int,
 ) -> None:
-    """Render the first thing a recruiter or analyst should understand."""
+    """Muestra la primera lectura del análisis."""
 
     takeaway = build_leader_takeaway(top, leader_red_flags)
     st.markdown(
@@ -2493,7 +2492,7 @@ def render_analysis_rail(
     leader_red_flags: int,
     scope_tickers: list[str],
 ) -> str:
-    """Render the persistent left rail for setup context and analyst controls."""
+    """Muestra el panel lateral con contexto y controles."""
 
     ticker = str(top.get("ticker", "")).upper()
     score = _score_text(top.get("fund_selection_score"))

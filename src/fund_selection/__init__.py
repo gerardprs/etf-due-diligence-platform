@@ -1,4 +1,4 @@
-"""ETF and fund selection analytics package."""
+"""Paquete de análisis para selección de ETFs y fondos."""
 
 from .data_loader import (
     DataQualityReport,

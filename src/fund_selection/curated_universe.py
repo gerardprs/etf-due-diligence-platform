@@ -1,4 +1,4 @@
-"""Curated ETF mandates used by the demo screening workflow."""
+"""Mandatos curados de ETFs usados por la demo de screening."""
 
 from __future__ import annotations
 

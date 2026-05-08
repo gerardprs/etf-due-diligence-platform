@@ -1,4 +1,4 @@
-"""Red-flag detection for preliminary fund due diligence."""
+"""Detección de alertas para revisión preliminar de fondos."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def generate_red_flags(
     analysis: pd.DataFrame,
     thresholds: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    """Detect business-relevant red flags for ETF/fund screening."""
+    """Detecta alertas relevantes para el screening de ETFs y fondos."""
 
     limits = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
     rows: list[dict[str, object]] = []
