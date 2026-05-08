@@ -1,4 +1,4 @@
-# ETF Screening & Due Diligence Dashboard
+# Revisión y Selección de ETFs
 
 Proyecto en Python y Streamlit para comparar ETFs dentro de un mandato de inversión y generar un primer filtro cuantitativo. La idea es simular una tarea real de un analista: revisar un peer group, comparar cada ETF contra su benchmark, detectar alertas básicas y dejar un memo preliminar para análisis posterior.
 

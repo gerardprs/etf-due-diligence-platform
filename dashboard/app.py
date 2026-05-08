@@ -2236,7 +2236,7 @@ def render_intro(compact: bool = False) -> None:
                 Hecho por <a href="https://www.linkedin.com/in/gerardosparedesromero25" target="_blank">Gerardo Paredes Romero</a>
                 | Data Analytics · Python Automation · Investment Analytics
             </div>
-            <div class="hero-title">ETF Screening & Due Diligence Dashboard</div>
+            <div class="hero-title">Revisión y Selección de ETFs</div>
             <div class="hero-copy">
                 Herramienta de investment analytics en Python para automatizar el primer filtro de ETFs:
                 mandato, peer group, benchmark por fondo, score de priorización, alertas y memo preliminar.
@@ -2502,7 +2502,7 @@ def render_analysis_rail(
     st.markdown(
         f"""
         <div class="rail-panel">
-            <div class="rail-kicker">ETF Screening Automation</div>
+            <div class="rail-kicker">Automatización de revisión de ETFs</div>
             <div class="rail-title">Vista rápida</div>
             <div class="rail-copy">
                 Primer filtro automatizado de ETFs para ranking, alertas y memo preliminar.
