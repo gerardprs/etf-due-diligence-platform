@@ -2270,7 +2270,9 @@ def render_analysis_rail(
             - **Performance:** CAGR y retorno ajustado por riesgo.
             - **Riesgo:** Sortino, volatilidad, drawdown y CVaR.
             - **Benchmark fit:** alpha, tracking error, R² e information ratio.
-            - **Calidad operativa:** liquidez, AUM, TER y red flags.
+            - **Liquidez:** AUM y volumen promedio en dólares.
+            - **Costo:** TER / expense ratio frente al peer group.
+            - **Penalizaciones:** red flags restan puntos al score final.
             """
         )
 
